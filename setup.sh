@@ -88,6 +88,22 @@ setup_sddm_theme() {
     echo -e "[Theme]\nCurrent=sugar-dark" | sudo tee /etc/sddm.conf.d/theme.conf > /dev/null
 }
 
+customize_sddm() {
+    local img="$1"
+    local theme_dir="/usr/share/sddm/themes/sugar-dark"
+    local conf="$theme_dir/theme.conf"
+
+    log_info "Customizing SDDM theme visuals..."
+
+    sudo cp "$img" "$theme_dir/background.jpg"
+    sudo chmod 644 "$theme_dir/background.jpg"
+
+    sudo sed -i 's|^Background=.*|Background="background.jpg"|' "$conf"
+    sudo sed -i 's|^MainColor=.*|MainColor="#cdd6f4"|' "$conf"
+    sudo sed -i 's|^AccentColor=.*|AccentColor="#89b4fa"|' "$conf"
+    sudo sed -i 's|^BackgroundColor=.*|BackgroundColor="#1e1e2e"|' "$conf"
+}
+
 enable_sddm() {
     log_info "Enabling SDDM systemd service..."
     sudo systemctl enable -f sddm.service
@@ -318,6 +334,7 @@ main() {
         "curl"
         "wget"
 	"vim"
+	"tree"
     )
 
     for pkg in "${base_pkgs[@]}"; do
@@ -337,6 +354,7 @@ main() {
     install_wayland_stack
     setup_hyprlock
     setup_sddm_theme
+    customize_sddm ".config/hypr/wallpapers/background.jpg"
     enable_sddm
 
     # 3. User Tools and Applications
