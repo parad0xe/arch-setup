@@ -2,35 +2,70 @@
     border: none;
     border-radius: 0;
     font-family: "JetBrainsMono Nerd Font", monospace;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: bold;
     min-height: 0;
 }
 
+/* 1. On rend la barre principale totalement transparente */
 window#waybar {
-    background-color: rgba(43, 48, 59, 0.85);
-    color: #ffffff;
-    border-bottom: 2px solid rgba(100, 114, 125, 0.5);
+    background-color: transparent;
+}
+
+/* 2. On crée le design de la "pilule" (fond, arrondi, ombres) */
+.modules-left > widget > *,
+.modules-center > widget > *,
+.modules-right > widget > * {
+    background-color: rgba(30, 30, 46, 0.9); /* Gris très foncé/bleuté */
+    color: #cdd6f4; /* Texte clair */
+    border-radius: 15px; /* C'est ici que se fait l'arrondi principal ! */
+    padding: 2px 15px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    margin-right: 8px; /* Espace entre les pilules */
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Légère bordure lumineuse */
+}
+
+/* Enlever la marge du dernier élément pour l'alignement */
+.modules-right > widget:last-child > * {
+    margin-right: 0;
+}
+
+/* --- ESPACES DE TRAVAIL (WORKSPACES) --- */
+#workspaces {
+    padding: 2px 5px;
 }
 
 #workspaces button {
-    padding: 0 10px;
-    color: #ffffff;
+    color: #a6adc8;
+    padding: 0 8px;
+    border-radius: 10px; /* Arrondi des boutons internes */
+    transition: all 0.2s ease;
 }
 
 #workspaces button:hover {
-    background: rgba(0, 0, 0, 0.2);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
 }
 
 #workspaces button.active {
-    background-color: #64727D;
-    border-radius: 10px;
+    background-color: #89b4fa; /* Accentuation bleue */
+    color: #11111b;
 }
 
-#clock, #pulseaudio, #network, #bluetooth, #tray {
-    padding: 0 10px;
-    margin: 0 4px;
-}
-
+/* --- COULEURS SPÉCIFIQUES (Optionnel) --- */
 #clock {
-    font-weight: bold;
+    color: #f38ba8; /* Rouge doux */
+}
+
+#pulseaudio {
+    color: #a6e3a1; /* Vert doux */
+}
+
+#network {
+    color: #89dceb; /* Cyan */
+}
+
+#bluetooth {
+    color: #89b4fa; /* Bleu */
 }
