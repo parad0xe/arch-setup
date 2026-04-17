@@ -72,6 +72,11 @@ install_wayland_stack() {
     done
 }
 
+setup_hyprlock() {
+    log_info "Installing hyprlock..."
+    install_pkg "hyprlock"
+}
+
 setup_sddm_theme() {
     log_info "Installing and configuring SDDM theme..."
     
@@ -329,6 +334,7 @@ main() {
 
     # 2. Graphical Environment
     install_wayland_stack
+    setup_hyprlock
     setup_sddm_theme
     enable_sddm
 
