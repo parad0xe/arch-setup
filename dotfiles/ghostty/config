@@ -1,0 +1,11 @@
+# Fonts
+font-family = "JetBrainsMono Nerd Font"
+font-size = 12
+
+# Window and Transparency
+window-decoration = false
+background-opacity = 0.8
+background-blur-radius = 20
+
+# Colors (Optional, a nice dark theme)
+theme = "catppuccin-mocha"
