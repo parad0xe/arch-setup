@@ -51,7 +51,7 @@ install_wayland_stack() {
     log_info "Installing the Wayland stack..."
     
     local wayland_pkgs=(
-        "hyprland"
+	"hyprland"
         "waybar"
         "sddm"
         "kitty"
@@ -62,6 +62,9 @@ install_wayland_stack() {
         "polkit-kde-agent"
         "qt5-wayland"
         "qt6-wayland"
+        "qt5-graphicaleffects"
+        "qt5-svg"
+        "qt5-quickcontrols2"
     )
 
     for pkg in "${wayland_pkgs[@]}"; do
