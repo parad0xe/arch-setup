@@ -221,6 +221,7 @@ setup_dotfiles() {
     link_config "$repo_dir/dotfiles/hypr" "$config_dir/hypr"
     link_config "$repo_dir/dotfiles/waybar" "$config_dir/waybar"
     link_config "$repo_dir/dotfiles/wofi" "$config_dir/wofi"
+    link_config "$repo_dir/dotfiles/mako" "$config_dir/mako"
 
     link_config "$repo_dir/dotfiles/zshrc" "$HOME/.zshrc"
     link_config "$repo_dir/dotfiles/ghostty" "$config_dir/ghostty"
