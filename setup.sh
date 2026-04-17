@@ -127,11 +127,12 @@ setup_bluetooth() {
 
 setup_nvidia() {
     log_info "Cleaning up any conflicting NVIDIA packages..."
-
-    sudo pacman -R --noconfirm nvidia nvidia-open 2>/dev/null || true
+    local conflict_pkgs=("nvidia" "nvidia-open")
+    for pkg in "${conflict_pkgs[@]}"; do
+        sudo pacman -R --noconfirm "$pkg" 2>/dev/null || true
+    done
 
     log_info "Installing NVIDIA drivers for RTX 4090..."
-    
     local nvidia_pkgs=(
         "linux-headers"
         "nvidia-dkms"
