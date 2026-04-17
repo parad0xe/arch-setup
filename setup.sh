@@ -12,7 +12,7 @@ log_error() {
 
 update_system() {
     log_info "Updating system packages..."
-    sudo pacman -Syu --noconfirm
+    yes | sudo pacman -Syu
 }
 
 install_pkg() {
