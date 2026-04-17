@@ -75,7 +75,7 @@ install_wayland_stack() {
 setup_sddm_theme() {
     log_info "Installing and configuring SDDM theme..."
     
-    install_aur_pkg "sddm-theme-sugar-dark"
+    install_aur_pkg "sddm-sugar-dark"
     
     log_info "Applying theme to SDDM configuration..."
     sudo mkdir -p /etc/sddm.conf.d
