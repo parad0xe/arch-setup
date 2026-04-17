@@ -322,6 +322,18 @@ setup_git() {
     log_info "Git successfully configured for $git_user."
 }
 
+setup_time() {
+    local timezone="$1"
+    
+    log_info "Configuring system time for $timezone..."
+    
+    sudo timedatectl set-timezone "$timezone"
+    sudo timedatectl set-ntp true
+    sudo hwclock --systohc
+    
+    log_info "Timezone set and NTP synchronization enabled."
+}
+
 main() {
     log_info "Starting the Arch Linux base setup..."
     
@@ -365,6 +377,7 @@ main() {
     setup_ssh_key "parad0xe@protonmail.com"
     setup_git "parad0xe" "parad0xe@protonmail.com"
     
+    setup_time "Europe/Paris"
     setup_dotfiles
 
     log_info "Installation and setup completed successfully!"
