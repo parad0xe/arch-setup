@@ -348,6 +348,8 @@ main() {
 	"vim"
 	"tree"
 	"fastfetch"
+	"wl-clipboard"
+	"libnotify"
     )
 
     for pkg in "${base_pkgs[@]}"; do
