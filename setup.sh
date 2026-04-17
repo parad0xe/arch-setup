@@ -125,6 +125,22 @@ setup_bluetooth() {
     log_info "Bluetooth services installed and enabled."
 }
 
+enable_multilib() {
+    log_info "Enabling multilib repository in pacman.conf..."
+    
+    local conf="/etc/pacman.conf"
+    
+    if grep -q "^\[multilib\]" "$conf"; then
+        echo "Multilib is already enabled."
+    else
+        log_info "Uncommenting [multilib] section..."
+        sudo sed -i '/^#\[multilib\]/{s/^#//;n;s/^#//}' "$conf"
+        
+        sudo pacman -Sy
+        log_info "Multilib enabled successfully."
+    fi
+}
+
 setup_nvidia() {
     log_info "Cleaning up any conflicting NVIDIA packages..."
     local conflict_pkgs=("nvidia" "nvidia-open")
@@ -284,6 +300,7 @@ setup_git() {
 main() {
     log_info "Starting the Arch Linux base setup..."
     
+    enable_multilib
     update_system
 
     local base_pkgs=(
