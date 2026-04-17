@@ -354,7 +354,7 @@ main() {
     install_wayland_stack
     setup_hyprlock
     setup_sddm_theme
-    customize_sddm ".config/hypr/wallpapers/background.jpg"
+    customize_sddm "dotfiles/hypr/wallpapers/background.jpg"
     enable_sddm
 
     # 3. User Tools and Applications
