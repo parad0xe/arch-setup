@@ -240,7 +240,7 @@ setup_dotfiles() {
     link_config "$repo_dir/dotfiles/mako" "$config_dir/mako"
 
     link_config "$repo_dir/dotfiles/zshrc" "$HOME/.zshrc"
-    link_config "$repo_dir/dotfiles/ghostty/" "$config_dir/ghostty/"
+    link_config "$repo_dir/dotfiles/ghostty/" "$config_dir/ghostty"
 
     log_info "Dotfiles linked successfully."
 }
@@ -347,6 +347,7 @@ main() {
         "wget"
 	"vim"
 	"tree"
+	"fastfetch"
     )
 
     for pkg in "${base_pkgs[@]}"; do

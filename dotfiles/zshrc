@@ -22,3 +22,5 @@ eval "$(zoxide init zsh)"
 # Enable fzf keybindings and fuzzy completion
 source /usr/share/fzf/key-bindings.zsh
 source /usr/share/fzf/completion.zsh
+
+fastfetch
