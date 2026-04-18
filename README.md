@@ -30,7 +30,7 @@ Customize the following variables in install.sh before launching:
 On a fresh Arch Linux installation, run the following command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/parad0xe/arch-setup/main/bootstrap.sh | bash
+curl -fsSL https://github.com/parad0xe/arch-setup/blob/main/bootstrap.sh | bash
 ```
 
 ## Notes
