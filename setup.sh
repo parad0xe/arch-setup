@@ -353,6 +353,7 @@ main() {
 	"libnotify"
 	"rofi-wayland"
 	"ffmpegthumbnailer"
+	"swww"
     )
 
     for pkg in "${base_pkgs[@]}"; do
