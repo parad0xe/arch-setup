@@ -8,4 +8,5 @@ window-decoration = false
 background-blur-radius = 20
 
 window-padding-x = 15
-window-padding-y = 15
+window-padding-y = 0
+window-padding-balance = true
