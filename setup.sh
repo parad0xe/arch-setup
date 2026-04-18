@@ -3,399 +3,399 @@
 set -e
 
 log_info() {
-    echo -e "\n\033[1;34m[INFO]\033[0m $1"
+  echo -e "\n\033[1;34m[INFO]\033[0m $1"
 }
 
 log_error() {
-    echo -e "\n\033[1;31m[ERROR]\033[0m $1"
+  echo -e "\n\033[1;31m[ERROR]\033[0m $1"
 }
 
 update_system() {
-    log_info "Updating system packages..."
-    yes | sudo pacman -Syu
+  log_info "Updating system packages..."
+  yes | sudo pacman -Syu
 }
 
 install_pkg() {
-    log_info "Checking and installing: $1"
-    sudo pacman -S --needed --noconfirm "$1"
+  log_info "Checking and installing: $1"
+  sudo pacman -S --needed --noconfirm "$1"
 }
 
 install_yay() {
-    log_info "Checking for AUR helper (yay)..."
-    if command -v yay &> /dev/null; then
-        echo "yay is already installed."
-        return
-    fi
+  log_info "Checking for AUR helper (yay)..."
+  if command -v yay &>/dev/null; then
+    echo "yay is already installed."
+    return
+  fi
 
-    log_info "Installing yay..."
-    local build_dir="/tmp/yay-build"
-    rm -rf "$build_dir"
+  log_info "Installing yay..."
+  local build_dir="/tmp/yay-build"
+  rm -rf "$build_dir"
 
-    git clone https://aur.archlinux.org/yay.git "$build_dir"
-    cd "$build_dir"
+  git clone https://aur.archlinux.org/yay.git "$build_dir"
+  cd "$build_dir"
 
-    makepkg -si --noconfirm
+  makepkg -si --noconfirm
 
-    # Clean up
-    cd "$HOME"
-    rm -rf "$build_dir"
-    log_info "yay installed successfully."
+  # Clean up
+  cd "$HOME"
+  rm -rf "$build_dir"
+  log_info "yay installed successfully."
 }
 
 install_aur_pkg() {
-    log_info "Checking and installing AUR package: $1"
-    yay -S --needed --noconfirm "$1"
+  log_info "Checking and installing AUR package: $1"
+  yay -S --needed --noconfirm "$1"
 }
 
 install_wayland_stack() {
-    log_info "Installing the Wayland stack..."
-    
-    local wayland_pkgs=(
-	"hyprland"
-        "waybar"
-        "sddm"
-        "kitty"
-        "wofi"
-        "hyprpaper"
-        "mako"
-        "ttf-jetbrains-mono-nerd"
-        "polkit-kde-agent"
-        "qt5-wayland"
-        "qt6-wayland"
-        "qt5-graphicaleffects"
-        "qt5-svg"
-        "qt5-quickcontrols2"
-    )
+  log_info "Installing the Wayland stack..."
 
-    for pkg in "${wayland_pkgs[@]}"; do
-        install_pkg "$pkg"
-    done
+  local wayland_pkgs=(
+    "hyprland"
+    "waybar"
+    "sddm"
+    "wofi"
+    "hyprpaper"
+    "mako"
+    "ttf-jetbrains-mono-nerd"
+    "polkit-kde-agent"
+    "qt5-wayland"
+    "qt6-wayland"
+    "qt5-graphicaleffects"
+    "qt5-svg"
+    "qt5-quickcontrols2"
+  )
+
+  for pkg in "${wayland_pkgs[@]}"; do
+    install_pkg "$pkg"
+  done
 }
 
 setup_hyprlock() {
-    log_info "Installing hyprlock..."
-    install_pkg "hyprlock"
+  log_info "Installing hyprlock..."
+  install_pkg "hyprlock"
 }
 
 setup_sddm_theme() {
-    log_info "Installing and configuring SDDM theme..."
-    
-    install_aur_pkg "sddm-sugar-dark"
-    
-    log_info "Applying theme to SDDM configuration..."
-    sudo mkdir -p /etc/sddm.conf.d
-    
-    echo -e "[Theme]\nCurrent=sugar-dark" | sudo tee /etc/sddm.conf.d/theme.conf > /dev/null
+  log_info "Installing and configuring SDDM theme..."
+
+  install_aur_pkg "sddm-theme-tokyo-night-git"
+
+  log_info "Applying theme to SDDM configuration..."
+  sudo mkdir -p /etc/sddm.conf.d
+
+  echo -e "[Theme]\nCurrent=tokyo-night-sddm" | sudo tee /etc/sddm.conf.d/theme.conf >/dev/null
 }
 
 customize_sddm() {
-    local img="$1"
-    local theme_dir="/usr/share/sddm/themes/sugar-dark"
-    local conf="$theme_dir/theme.conf"
+  local img="$1"
+  local theme_dir="/usr/share/sddm/themes/tokyo-night-sddm"
+  local conf="$theme_dir/theme.conf"
 
-    log_info "Customizing SDDM theme visuals..."
+  log_info "Customizing SDDM theme visuals..."
 
-    sudo cp "$img" "$theme_dir/background.jpg"
-    sudo chmod 644 "$theme_dir/background.jpg"
+  sudo cp "$img" "$theme_dir/background.jpg"
+  sudo chmod 644 "$theme_dir/background.jpg"
 
-    sudo sed -i 's|^Background=.*|Background="background.jpg"|' "$conf"
-    sudo sed -i 's|^MainColor=.*|MainColor="#cdd6f4"|' "$conf"
-    sudo sed -i 's|^AccentColor=.*|AccentColor="#89b4fa"|' "$conf"
-    sudo sed -i 's|^BackgroundColor=.*|BackgroundColor="#1e1e2e"|' "$conf"
+  sudo sed -i 's|^Background=.*|Background="background.jpg"|' "$conf"
+  sudo sed -i 's|^MainColor=.*|MainColor="#cdd6f4"|' "$conf"
+  sudo sed -i 's|^AccentColor=.*|AccentColor="#89b4fa"|' "$conf"
+  sudo sed -i 's|^BackgroundColor=.*|BackgroundColor="#1e1e2e"|' "$conf"
+  sudo sed -i 's|^BackgroundImageHAlignment=.*|BackgroundImageHAlignment="center"|' "$conf"
+  sudo sed -i 's|^BackgroundImageVAlignment=.*|BackgroundImageVAlignment="center"|' "$conf"
 }
 
 enable_sddm() {
-    log_info "Enabling SDDM systemd service..."
-    sudo systemctl enable -f sddm.service
+  log_info "Enabling SDDM systemd service..."
+  sudo systemctl enable -f sddm.service
 }
 
 setup_essential_services() {
-    log_info "Setting up audio (Pipewire) and networking..."
+  log_info "Setting up audio (Pipewire) and networking..."
 
-    local service_pkgs=(
-        "networkmanager"
-        "pipewire"
-        "pipewire-alsa"
-        "pipewire-pulse"
-        "pipewire-jack"
-        "wireplumber"
-    )
+  local service_pkgs=(
+    "networkmanager"
+    "pipewire"
+    "pipewire-alsa"
+    "pipewire-pulse"
+    "pipewire-jack"
+    "wireplumber"
+  )
 
-    for pkg in "${service_pkgs[@]}"; do
-        install_pkg "$pkg"
-    done
+  for pkg in "${service_pkgs[@]}"; do
+    install_pkg "$pkg"
+  done
 
-    # Enable NetworkManager to start on boot
-    sudo systemctl enable NetworkManager.service
+  # Enable NetworkManager to start on boot
+  sudo systemctl enable NetworkManager.service
 
-    log_info "Essential services installed and enabled."
+  log_info "Essential services installed and enabled."
 }
 
 setup_bluetooth() {
-    log_info "Setting up Bluetooth..."
-    
-    local bt_pkgs=(
-        "bluez"
-        "bluez-utils"
-        "blueman"
-    )
+  log_info "Setting up Bluetooth..."
 
-    for pkg in "${bt_pkgs[@]}"; do
-        install_pkg "$pkg"
-    done
+  local bt_pkgs=(
+    "bluez"
+    "bluez-utils"
+    "blueman"
+  )
 
-    sudo systemctl enable bluetooth.service
-    
-    log_info "Bluetooth services installed and enabled."
+  for pkg in "${bt_pkgs[@]}"; do
+    install_pkg "$pkg"
+  done
+
+  sudo systemctl enable bluetooth.service
+
+  log_info "Bluetooth services installed and enabled."
 }
 
 enable_multilib() {
-    log_info "Enabling multilib repository in pacman.conf..."
-    
-    local conf="/etc/pacman.conf"
-    
-    if grep -q "^\[multilib\]" "$conf"; then
-        echo "Multilib is already enabled."
-    else
-        log_info "Uncommenting [multilib] section..."
-        sudo sed -i '/^#\[multilib\]/{s/^#//;n;s/^#//}' "$conf"
-        
-        sudo pacman -Sy
-        log_info "Multilib enabled successfully."
-    fi
+  log_info "Enabling multilib repository in pacman.conf..."
+
+  local conf="/etc/pacman.conf"
+
+  if grep -q "^\[multilib\]" "$conf"; then
+    echo "Multilib is already enabled."
+  else
+    log_info "Uncommenting [multilib] section..."
+    sudo sed -i '/^#\[multilib\]/{s/^#//;n;s/^#//}' "$conf"
+
+    sudo pacman -Sy
+    log_info "Multilib enabled successfully."
+  fi
 }
 
 setup_nvidia() {
-    log_info "Cleaning up any conflicting NVIDIA packages..."
-    local conflict_pkgs=("nvidia" "nvidia-open")
-    for pkg in "${conflict_pkgs[@]}"; do
-        sudo pacman -R --noconfirm "$pkg" 2>/dev/null || true
-    done
+  log_info "Cleaning up any conflicting NVIDIA packages..."
+  local conflict_pkgs=("nvidia" "nvidia-open")
+  for pkg in "${conflict_pkgs[@]}"; do
+    sudo pacman -R --noconfirm "$pkg" 2>/dev/null || true
+  done
 
-    log_info "Installing NVIDIA drivers for RTX 4090..."
-    local nvidia_pkgs=(
-        "linux-headers"
-        "nvidia-dkms"
-        "nvidia-utils"
-        "lib32-nvidia-utils"
-        "egl-wayland"
-        "nvidia-settings"
-    )
+  log_info "Installing NVIDIA drivers for RTX 4090..."
+  local nvidia_pkgs=(
+    "linux-headers"
+    "nvidia-dkms"
+    "nvidia-utils"
+    "lib32-nvidia-utils"
+    "egl-wayland"
+    "nvidia-settings"
+  )
 
-    for pkg in "${nvidia_pkgs[@]}"; do
-        install_pkg "$pkg"
-    done
-    
-    log_info "Configuring early module loading for NVIDIA..."
-    sudo sed -i 's/MODULES=()/MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)/' /etc/mkinitcpio.conf
-    sudo mkinitcpio -P
-    
-    log_info "NVIDIA drivers installed."
+  for pkg in "${nvidia_pkgs[@]}"; do
+    install_pkg "$pkg"
+  done
+
+  log_info "Configuring early module loading for NVIDIA..."
+  sudo sed -i 's/MODULES=()/MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)/' /etc/mkinitcpio.conf
+  sudo mkinitcpio -P
+
+  log_info "NVIDIA drivers installed."
 }
 
 setup_grub_nvidia() {
-    log_info "Configuring GRUB for NVIDIA Wayland support..."
+  log_info "Configuring GRUB for NVIDIA Wayland support..."
 
-    local grub_file="/etc/default/grub"
-    local param="nvidia_drm.modeset=1"
+  local grub_file="/etc/default/grub"
+  local param="nvidia_drm.modeset=1"
 
-    if grep -q "$param" "$grub_file"; then
-        echo "GRUB is already configured for NVIDIA DRM."
-    else
-        log_info "Adding $param to GRUB_CMDLINE_LINUX_DEFAULT..."
-        sudo sed -i "s/\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 $param\"/" "$grub_file"
+  if grep -q "$param" "$grub_file"; then
+    echo "GRUB is already configured for NVIDIA DRM."
+  else
+    log_info "Adding $param to GRUB_CMDLINE_LINUX_DEFAULT..."
+    sudo sed -i "s/\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 $param\"/" "$grub_file"
 
-        log_info "Regenerating GRUB configuration..."
-        sudo grub-mkconfig -o /boot/grub/grub.cfg
-    fi
+    log_info "Regenerating GRUB configuration..."
+    sudo grub-mkconfig -o /boot/grub/grub.cfg
+  fi
 }
 
 link_config() {
-    local src="$1"
-    local dest="$2"
+  local src="$1"
+  local dest="$2"
 
-    mkdir -p "$(dirname "$dest")"
+  mkdir -p "$(dirname "$dest")"
 
-    if [ -e "$dest" ] && [ ! -L "$dest" ]; then
-        log_info "Backing up existing $dest to ${dest}.bak"
-        mv "$dest" "${dest}.bak"
-    elif [ -L "$dest" ]; then
-        rm "$dest"
-    fi
+  if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+    log_info "Backing up existing $dest to ${dest}.bak"
+    mv "$dest" "${dest}.bak"
+  elif [ -L "$dest" ]; then
+    rm "$dest"
+  fi
 
-    log_info "Linking $src to $dest"
-    ln -s "$src" "$dest"
+  log_info "Linking $src to $dest"
+  ln -s "$src" "$dest"
 }
 
 setup_dotfiles() {
-    log_info "Setting up dotfiles (symlinks)..."
+  log_info "Setting up dotfiles (symlinks)..."
 
-    local repo_dir
-    repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local config_dir="$HOME/.config"
+  local repo_dir
+  repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local config_dir="$HOME/.config"
 
-    link_config "$repo_dir/dotfiles/hypr" "$config_dir/hypr"
-    link_config "$repo_dir/dotfiles/waybar" "$config_dir/waybar"
-    link_config "$repo_dir/dotfiles/wofi" "$config_dir/wofi"
-    link_config "$repo_dir/dotfiles/mako" "$config_dir/mako"
+  link_config "$repo_dir/dotfiles/hypr" "$config_dir/hypr"
+  link_config "$repo_dir/dotfiles/waybar" "$config_dir/waybar"
+  link_config "$repo_dir/dotfiles/wofi" "$config_dir/wofi"
+  link_config "$repo_dir/dotfiles/mako" "$config_dir/mako"
 
-    link_config "$repo_dir/dotfiles/zshrc" "$HOME/.zshrc"
-    link_config "$repo_dir/dotfiles/ghostty/" "$config_dir/ghostty"
-    link_config "$repo_dir/assets/wallpapers/" "$HOME/Pictures/wallpapers"
-    
-    link_config "$repo_dir/dotfiles/starship/nerd-font-symbols.toml" "$config_dir/starship.toml"
+  link_config "$repo_dir/dotfiles/zshrc" "$HOME/.zshrc"
+  link_config "$repo_dir/dotfiles/ghostty/" "$config_dir/ghostty"
+  link_config "$repo_dir/assets/wallpapers/" "$HOME/Pictures/wallpapers"
 
-    log_info "Dotfiles linked successfully."
+  link_config "$repo_dir/dotfiles/starship/nerd-font-symbols.toml" "$config_dir/starship.toml"
+
+  log_info "Dotfiles linked successfully."
 }
 
 setup_cli_tools() {
-    log_info "Installing CLI tools..."
+  log_info "Installing CLI tools..."
 
-    local tools=(
-        "zsh"
-        "fzf"
-        "zoxide"
-        "eza"
-        "bat"
-        "fastfetch"
-    )
+  local tools=(
+    "zsh"
+    "fzf"
+    "zoxide"
+    "eza"
+    "bat"
+    "fastfetch"
+  )
 
-    for pkg in "${tools[@]}"; do
-        install_pkg "$pkg"
-    done
-    
-    install_aur_pkg "ghostty"
+  for pkg in "${tools[@]}"; do
+    install_pkg "$pkg"
+  done
+
+  install_aur_pkg "ghostty"
 }
 
 setup_zsh() {
-    log_info "Setting up Oh My Zsh..."
+  log_info "Setting up Oh My Zsh..."
 
-    if [ ! -d "$HOME/.oh-my-zsh" ]; then
-        RUNZSH=no CHSH=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-        log_info "Oh My Zsh installed successfully."
-    else
-        echo "Oh My Zsh is already installed."
-    fi
+  if [ ! -d "$HOME/.oh-my-zsh" ]; then
+    RUNZSH=no CHSH=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    log_info "Oh My Zsh installed successfully."
+  else
+    echo "Oh My Zsh is already installed."
+  fi
 }
 
 setup_user_apps() {
-    log_info "Installing user applications..."
-    
-    install_aur_pkg "brave-bin"
+  log_info "Installing user applications..."
 
-    local fm_pkgs=(
-        "thunar"
-        "thunar-archive-plugin"
-        "gvfs"
-        "file-roller"
-    )
+  install_aur_pkg "brave-bin"
 
-    for pkg in "${fm_pkgs[@]}"; do
-        install_pkg "$pkg"
-    done
+  local fm_pkgs=(
+    "thunar"
+    "thunar-archive-plugin"
+    "gvfs"
+    "file-roller"
+  )
+
+  for pkg in "${fm_pkgs[@]}"; do
+    install_pkg "$pkg"
+  done
 }
 
 setup_ssh_key() {
-    local email="$1"
-    local key_path="$HOME/.ssh/id_ed25519"
-    
-    log_info "Setting up SSH key for $email..."
-    
-    mkdir -p "$HOME/.ssh"
-    chmod 700 "$HOME/.ssh"
-    
-    if [ -f "$key_path" ]; then
-        echo "SSH key already exists at $key_path."
-    else
-        ssh-keygen -t ed25519 -C "$email" -f "$key_path" -N ""
-        log_info "SSH key generated successfully."
-    fi
+  local email="$1"
+  local key_path="$HOME/.ssh/id_ed25519"
+
+  log_info "Setting up SSH key for $email..."
+
+  mkdir -p "$HOME/.ssh"
+  chmod 700 "$HOME/.ssh"
+
+  if [ -f "$key_path" ]; then
+    echo "SSH key already exists at $key_path."
+  else
+    ssh-keygen -t ed25519 -C "$email" -f "$key_path" -N ""
+    log_info "SSH key generated successfully."
+  fi
 }
 
 setup_git() {
-    local git_user="$1"
-    local git_email="$2"
+  local git_user="$1"
+  local git_email="$2"
 
-    log_info "Configuring global Git settings..."
+  log_info "Configuring global Git settings..."
 
-    git config --global user.name "$git_user"
-    git config --global user.email "$git_email"
-    git config --global init.defaultBranch main
+  git config --global user.name "$git_user"
+  git config --global user.email "$git_email"
+  git config --global init.defaultBranch main
 
-    log_info "Git successfully configured for $git_user."
+  log_info "Git successfully configured for $git_user."
 }
 
 setup_time() {
-    local timezone="$1"
-    
-    log_info "Configuring system time for $timezone..."
-    
-    sudo timedatectl set-timezone "$timezone"
-    sudo timedatectl set-ntp true
-    sudo hwclock --systohc
-    
-    log_info "Timezone set and NTP synchronization enabled."
+  local timezone="$1"
+
+  log_info "Configuring system time for $timezone..."
+
+  sudo timedatectl set-timezone "$timezone"
+  sudo timedatectl set-ntp true
+  sudo hwclock --systohc
+
+  log_info "Timezone set and NTP synchronization enabled."
 }
 
 main() {
-    log_info "Starting the Arch Linux base setup..."
-    
-    enable_multilib
-    update_system
+  log_info "Starting the Arch Linux base setup..."
 
-    local base_pkgs=(
-        "base-devel"
-        "git"
-        "curl"
-        "wget"
-	"vim"
-	"tree"
-	"fastfetch"
-	"wl-clipboard"
-	"libnotify"
-	"rofi-wayland"
-	"ffmpegthumbnailer"
-	"swww"
-	"starship"
-	"zsh-autosuggestions"
-	"zsh-syntax-highlighting"
-    )
+  enable_multilib
+  update_system
 
-    for pkg in "${base_pkgs[@]}"; do
-        install_pkg "$pkg"
-    done
+  local base_pkgs=(
+    "base-devel"
+    "git"
+    "curl"
+    "wget"
+    "vim"
+    "tree"
+    "fastfetch"
+    "wl-clipboard"
+    "libnotify"
+    "rofi-wayland"
+    "ffmpegthumbnailer"
+    "swww"
+    "starship"
+    "zsh-autosuggestions"
+    "zsh-syntax-highlighting"
+  )
 
+  for pkg in "${base_pkgs[@]}"; do
+    install_pkg "$pkg"
+  done
 
-    install_yay
+  install_yay
 
-    install_aur_pkg "mpvpaper"
+  install_aur_pkg "mpvpaper"
 
-    # 1. Hardware and Services
-    setup_essential_services
-    setup_bluetooth
-    setup_nvidia
-    setup_grub_nvidia
+  # 1. Hardware and Services
+  setup_essential_services
+  setup_bluetooth
+  setup_nvidia
+  setup_grub_nvidia
 
-    # 2. Graphical Environment
-    install_wayland_stack
-    setup_hyprlock
-    setup_sddm_theme
-    customize_sddm "dotfiles/hypr/wallpapers/background.jpg"
-    enable_sddm
+  # 2. Graphical Environment
+  install_wayland_stack
+  setup_hyprlock
+  setup_sddm_theme
+  customize_sddm "dotfiles/hypr/wallpapers/background.jpg"
+  enable_sddm
 
-    # 3. User Tools and Applications
-    setup_cli_tools
-    setup_zsh
-    setup_user_apps
-    
-    setup_ssh_key "parad0xe@protonmail.com"
-    setup_git "parad0xe" "parad0xe@protonmail.com"
-    
-    setup_time "Europe/Paris"
-    setup_dotfiles
+  # 3. User Tools and Applications
+  setup_cli_tools
+  setup_zsh
+  setup_user_apps
 
-    log_info "Installation and setup completed successfully!"
-    log_info "Please reboot to apply changes."
+  setup_ssh_key "parad0xe@protonmail.com"
+  setup_git "parad0xe" "parad0xe@protonmail.com"
+
+  setup_time "Europe/Paris"
+  setup_dotfiles
+
+  log_info "Installation and setup completed successfully!"
+  log_info "Please reboot to apply changes."
 }
 
 main

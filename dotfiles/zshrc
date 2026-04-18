@@ -10,9 +10,8 @@ plugins=(git z)
 source $ZSH/oh-my-zsh.sh
 
 # --- CUSTOM ALIASES ---
-alias ls="eza --icons"
-alias ll="eza -lh --icons"
-alias la="eza -lah --icons"
+alias ls="eza --icons always"
+alias ll="eza -lah --icons always"
 alias cat="bat"
 
 # --- TOOL INITIALIZATION ---
