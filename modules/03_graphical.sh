@@ -7,7 +7,6 @@ _install_wayland_stack() {
         "waybar"
         "sddm"
         "wofi"
-        "hyprpaper"
         "mako"
         "ttf-jetbrains-mono-nerd"
         "polkit-kde-agent"
@@ -77,6 +76,6 @@ setup() {
     run_task "Install Wayland stack" _install_wayland_stack
     run_task "Install hyprlock" _install_hyprlock
     run_task "Setup SDDM theme" _setup_sddm_theme
-    run_task "Customize SDDM" _customize_sddm "$CFG_BG_IMG"
+    run_task "Customize SDDM" _customize_sddm "$CFG_LOCK_BG_IMG"
     run_task "Enable SDDM service" _enable_sddm
 }

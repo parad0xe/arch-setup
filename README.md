@@ -12,14 +12,14 @@ the installation and configuration of a complete Arch Linux environment.
 
 ## Project Structure
 
-* install.sh: Main orchestrator and global variables.
+* setup.sh: Main orchestrator and global variables.
 * bootstrap.sh: Entry script to clone the repo into ~/.dotfiles.
 * modules/: Individual installation scripts.
 * .config/: Configurations for Hyprland, Waybar, Mako, Ghostty, etc.
 
 ## Configuration
 
-Customize the following variables in install.sh before launching:
+Customize the following variables in `setup.sh` before launching:
 
 * CFG\_TIMEZONE: Your system timezone (e.g., "Europe/Paris").
 * CFG\_EMAIL: Email address for Git and SSH key generation.

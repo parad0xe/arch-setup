@@ -1,34 +1,95 @@
 #!/bin/bash
 
-STATE_FILE="$HOME/.current_wallpaper"
-
-if [ -n "$1" ]; then
-    echo "$1" > "$STATE_FILE"
-    WALLPAPER="$1"
-else
-    if [ -f "$STATE_FILE" ]; then
-        WALLPAPER=$(cat "$STATE_FILE")
+# Restores the desktop wallpaper at boot securely using awww.
+_restore_desktop() {
+    local active_dir="$HOME/.config/hypr/wallpapers"
+    
+    if ls "$active_dir"/desktop_active.mp4 1> /dev/null 2>&1; then
+        killall awww-daemon 2>/dev/null
+        killall mpvpaper 2>/dev/null
+        mpvpaper -o "loop no-audio panscan=1.0 hwdec=auto" "*" "$active_dir/desktop_active.mp4" & disown
     else
-        exit 0
+        local img=$(find "$active_dir" -maxdepth 1 -name "desktop_active.*" | \
+            grep -iE "\.(jpg|jpeg|png|webp)$" | head -n 1)
+
+        if [ -n "$img" ]; then
+            if ! pgrep -x awww-daemon > /dev/null; then
+                awww-daemon --format xrgb &
+            fi
+            
+            for i in {1..20}; do
+                if awww query > /dev/null 2>&1; then 
+                    sleep 0.1
+                    break
+                fi
+                sleep 0.1
+            done
+            
+            awww img "$img" --transition-type none
+        fi
     fi
-fi
+}
 
-EXT="${WALLPAPER##*.}"
-EXT=$(echo "$EXT" | tr '[:upper:]' '[:lower:]')
+# Updates wallpapers using awww or mpvpaper depending on format.
+_update_wallpaper() {
+    local src="$1"
+    local type="${2:-desktop}"
+    local active_dir="$HOME/.config/hypr/wallpapers"
+    local ext="${src##*.}"
+    ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
 
-if [ "$EXT" = "mp4" ]; then
-    killall swww-daemon 2>/dev/null # Coupe le gestionnaire d'images
-    killall mpvpaper 2>/dev/null    # Relance proprement la vidéo
-    
-    mpvpaper -o "loop no-audio panscan=1.0 hwdec=auto" "*" "$WALLPAPER" & disown
+    mkdir -p "$active_dir"
 
-elif [[ "$EXT" =~ ^(jpg|jpeg|png|webp)$ ]]; then
-    killall mpvpaper 2>/dev/null    # Coupe la vidéo
-    
-    if ! pgrep -x swww-daemon > /dev/null; then
-        swww-daemon &
-        sleep 0.5
+    local process_src="$src"
+    if [ "$ext" = "mp4" ] && [ "$type" != "desktop" ]; then
+        local filename=$(basename "$src")
+        process_src="$HOME/Pictures/wallpapers/.thumbnails/${filename%.mp4}.jpg"
+        if [ ! -f "$process_src" ]; then
+            ffmpegthumbnailer -i "$src" -o "$process_src" -s 1080
+        fi
     fi
-    
-    swww img "$WALLPAPER" --transition-type any --transition-fps 60 & disown
+
+    case "$type" in
+        "desktop")
+            rm -f "$active_dir/desktop_active."*
+            
+            if [ "$ext" = "mp4" ]; then
+                cp "$src" "$active_dir/desktop_active.mp4"
+                killall awww-daemon 2>/dev/null
+                killall mpvpaper 2>/dev/null
+                mpvpaper -o "loop no-audio panscan=1.0 hwdec=auto" "*" "$active_dir/desktop_active.mp4" & disown
+            else
+                local target="$active_dir/desktop_active.$ext"
+                cp "$src" "$target"
+                
+                killall mpvpaper 2>/dev/null
+                
+                if ! pgrep -x awww-daemon > /dev/null; then
+                    awww-daemon --format xrgb &
+                fi
+
+                for i in {1..20}; do
+                    if awww query > /dev/null 2>&1; then break; fi
+                    sleep 0.1
+                done
+                
+                awww img "$target" --transition-type simple --transition-step 20 --transition-fps 60 & disown
+            fi
+            ;;
+        "lock")
+            cp "$process_src" "$active_dir/lock_active.jpg"
+            notify-send "Wallpaper" "Lock screen background updated"
+            ;;
+        "login")
+            local login_target="/usr/share/sddm/themes/tokyo-night-sddm/background.jpg"
+            pkexec cp "$process_src" "$login_target"
+            notify-send "Wallpaper" "Login screen background updated"
+            ;;
+    esac
+}
+
+if [ -z "$1" ]; then
+    _restore_desktop
+else
+    _update_wallpaper "$1" "$2"
 fi
