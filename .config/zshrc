@@ -10,8 +10,8 @@ plugins=(git z)
 source $ZSH/oh-my-zsh.sh
 
 # --- CUSTOM ALIASES ---
-alias ls="eza --icons always"
-alias ll="eza -lah --icons always"
+alias ls="eza --icons always --group-directories-first"
+alias ll="eza -lah --icons always --group-directories-first"
 alias cat="bat"
 alias tree="tree -a -I .git/"
 

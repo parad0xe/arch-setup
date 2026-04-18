@@ -58,6 +58,7 @@ _setup_dotfiles() {
     link_config "$repo/.config/hypr" "$conf_dir/hypr"
     link_config "$repo/.config/waybar" "$conf_dir/waybar"
     link_config "$repo/.config/wofi" "$conf_dir/wofi"
+    link_config "$repo/.config/rofi" "$conf_dir/rofi"
     link_config "$repo/.config/mako" "$conf_dir/mako"
     link_config "$repo/.config/ghostty" "$conf_dir/ghostty"
 	link_config "$repo/.config/nvim" "$conf_dir/nvim"

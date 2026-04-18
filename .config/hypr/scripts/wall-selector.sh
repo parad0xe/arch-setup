@@ -4,7 +4,8 @@
 _wall_selector() {
     local wall_dir="$HOME/Pictures/wallpapers"
     local thumb_dir="$wall_dir/.thumbnails"
-    local script="$HOME/.config/hypr/change-wall.sh"
+    local script="$HOME/.config/hypr/scripts/change-wall.sh"
+	local theme="$HOME/.config/rofi/wallpaper.rasi"
     
     mkdir -p "$thumb_dir"
 
@@ -34,11 +35,11 @@ _wall_selector() {
     done
 
     # 3. Prompt user
-    local img_choice=$(echo -e -n "$rofi_list" | rofi -dmenu -i -p "Select Image/Video" -show-icons)
+    local img_choice=$(echo -e -n "$rofi_list" | rofi -dmenu -i -p "Wallpaper" -show-icons -theme "$theme")
     [ -z "$img_choice" ] && exit 0
     local full_path="$wall_dir/$img_choice"
 
-    local type_choice=$(echo -e "desktop\nlock\nlogin" | rofi -dmenu -i -p "Apply to...")
+    local type_choice=$(echo -e "desktop\nlock\nlogin" | rofi -dmenu -i -p "Apply to..." -theme "$theme")
     [ -z "$type_choice" ] && exit 0
 
     # 4. Execute application script
