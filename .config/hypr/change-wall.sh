@@ -1,9 +1,9 @@
 #!/bin/bash
 
+active_dir="$HOME/Pictures/wallpapers/.active"
+
 # Restores the desktop wallpaper at boot securely using awww.
 _restore_desktop() {
-    local active_dir="$HOME/.config/hypr/wallpapers"
-    
     if ls "$active_dir"/desktop_active.mp4 1> /dev/null 2>&1; then
         killall awww-daemon 2>/dev/null
         killall mpvpaper 2>/dev/null
@@ -34,7 +34,6 @@ _restore_desktop() {
 _update_wallpaper() {
     local src="$1"
     local type="${2:-desktop}"
-    local active_dir="$HOME/.config/hypr/wallpapers"
     local ext="${src##*.}"
     ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
 
@@ -59,7 +58,7 @@ _update_wallpaper() {
                 killall mpvpaper 2>/dev/null
                 mpvpaper -o "loop no-audio panscan=1.0 hwdec=auto" "*" "$active_dir/desktop_active.mp4" & disown
             else
-                local target="$active_dir/desktop_active.$ext"
+                local target="$active_dir/desktop_active.jpg"
                 cp "$src" "$target"
                 
                 killall mpvpaper 2>/dev/null
