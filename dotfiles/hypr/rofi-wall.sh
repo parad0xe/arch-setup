@@ -25,7 +25,6 @@ for file in "$WALL_DIR"/*; do
         thumb="$THUMB_DIR/${filename%.mp4}.jpg"
         ROFI_LIST+="${filename}\0icon\x1f${thumb}\n"
     elif [[ "$ext" =~ ^(jpg|jpeg|png|webp)$ ]]; then
-        # Pour une image, on utilise l'image elle-même comme icône
         ROFI_LIST+="${filename}\0icon\x1f${file}\n"
     fi
 done
@@ -33,5 +32,5 @@ done
 CHOICE=$(echo -e -n "$ROFI_LIST" | rofi -dmenu -i -p "Wallpapers" -show-icons)
 
 if [ -n "$CHOICE" ]; then
-    ~/Projects/arch-setup/dotfiles/hypr/change-wall.sh "$WALL_DIR/$CHOICE"
+    ~/.config/hypr/change-wall.sh "$WALL_DIR/$CHOICE"
 fi
