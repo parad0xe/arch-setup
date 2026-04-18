@@ -55,19 +55,19 @@ _setup_dotfiles() {
     local conf_dir="$HOME/.config"
     local repo="$SETUP_DIR"
 
-    link_config "$repo/dotfiles/hypr" "$conf_dir/hypr"
-    link_config "$repo/dotfiles/waybar" "$conf_dir/waybar"
-    link_config "$repo/dotfiles/wofi" "$conf_dir/wofi"
-    link_config "$repo/dotfiles/mako" "$conf_dir/mako"
-    link_config "$repo/dotfiles/ghostty" "$conf_dir/ghostty"
+    link_config "$repo/.config/hypr" "$conf_dir/hypr"
+    link_config "$repo/.config/waybar" "$conf_dir/waybar"
+    link_config "$repo/.config/wofi" "$conf_dir/wofi"
+    link_config "$repo/.config/mako" "$conf_dir/mako"
+    link_config "$repo/.config/ghostty" "$conf_dir/ghostty"
 
-    link_config "$repo/dotfiles/zshrc" "$HOME/.zshrc"
-    link_config "$repo/dotfiles/vimrc" "$HOME/.vimrc"
+    link_config "$repo/.config/zshrc" "$HOME/.zshrc"
+    link_config "$repo/.config/vimrc" "$HOME/.vimrc"
 
-    local starship="$repo/dotfiles/starship/nerd-font-symbols.toml"
+    local starship="$repo/.config/starship/nerd-font-symbols.toml"
     link_config "$starship" "$conf_dir/starship.toml"
 
-    local wall_dir="$repo/assets/wallpapers/"
+    local wall_dir="$repo/.assets/wallpapers/"
     link_config "$wall_dir" "$HOME/Pictures/wallpapers"
 }
 

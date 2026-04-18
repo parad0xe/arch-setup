@@ -15,7 +15,7 @@ the installation and configuration of a complete Arch Linux environment.
 * install.sh: Main orchestrator and global variables.
 * bootstrap.sh: Entry script to clone the repo into ~/.dotfiles.
 * modules/: Individual installation scripts.
-* dotfiles/: Configurations for Hyprland, Waybar, Mako, Ghostty, etc.
+* .config/: Configurations for Hyprland, Waybar, Mako, Ghostty, etc.
 
 ## Configuration
 
@@ -30,7 +30,9 @@ Customize the following variables in install.sh before launching:
 On a fresh Arch Linux installation, run the following command:
 
 ```bash
-curl -fsSL https://github.com/parad0xe/arch-setup/blob/main/bootstrap.sh | bash
+git clone git@github.com:parad0xe/arch-setup.git ~/.dotfiles
+cd ~/.dotfiles
+./install.sh
 ```
 
 ## Notes

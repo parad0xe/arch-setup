@@ -7,7 +7,7 @@ export ASSETS_DIR="$SETUP_DIR/assets"
 
 # --- CONFIGURATION GLOBALE ---
 export CFG_TIMEZONE="Europe/Paris"
-export CFG_BG_IMG="$SETUP_DIR/dotfiles/hypr/wallpapers/background.jpg"
+export CFG_BG_IMG="$SETUP_DIR/.config/hypr/wallpapers/background.jpg"
 export CFG_EMAIL="parad0xe@protonmail.com"
 export CFG_GIT_USER="parad0xe"
 

@@ -2,9 +2,7 @@
 
 set -e
 
-# --- CONFIGURATION ---
-# Remplace cette URL par l'URL réelle de ton dépôt Git.
-REPO_URL="https://github.com/parad0xe/arch-setup.git"
+SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_DIR="$HOME/.dotfiles"
 
 # Prints an informational message to the standard output.
@@ -17,7 +15,6 @@ log_info() {
 
 log_info "Starting Arch Linux setup bootstrap..."
 
-# 1. Installer Git si nécessaire
 if ! command -v git &>/dev/null; then
     log_info "Installing Git..."
     sudo pacman -Sy --needed --noconfirm git
@@ -28,11 +25,11 @@ if [ -d "$TARGET_DIR" ]; then
     cd "$TARGET_DIR"
     git pull
 else
-    log_info "Cloning repository to $TARGET_DIR..."
-    git clone "$REPO_URL" "$TARGET_DIR"
+    log_info "Moving the repository to $TARGET_DIR..."
+	mv $SETUP_DIR $TARGET_DIR
 fi
 
-# 3. Lancer ton orchestrateur d'installation
 log_info "Launching the main installation script..."
 cd "$TARGET_DIR"
+sleep 3
 bash install.sh
