@@ -13,6 +13,19 @@ source $ZSH/oh-my-zsh.sh
 alias ls="eza --icons always"
 alias ll="eza -lah --icons always"
 alias cat="bat"
+alias tree="tree -a -I .git/"
+
+export PATH="$HOME/.cargo/bin:$PATH"
+
+# --- PYENV ---
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+
+# --- NVM ---
+if [ -f /usr/share/nvm/init-nvm.sh ]; then
+    source /usr/share/nvm/init-nvm.sh
+fi
 
 # --- TOOL INITIALIZATION ---
 # Initialize zoxide (smart cd)

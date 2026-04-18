@@ -25,6 +25,10 @@ _update_system() {
 _install_system_packages() {
     local base_pkgs=(
         "base-devel"
+		"openssl"
+		"zlib"
+		"xz"
+		"tk"
         "git"
         "curl"
         "wget"

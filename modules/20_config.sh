@@ -60,6 +60,7 @@ _setup_dotfiles() {
     link_config "$repo/.config/wofi" "$conf_dir/wofi"
     link_config "$repo/.config/mako" "$conf_dir/mako"
     link_config "$repo/.config/ghostty" "$conf_dir/ghostty"
+	link_config "$repo/.config/nvim" "$conf_dir/nvim"
 
     link_config "$repo/.config/zshrc" "$HOME/.zshrc"
     link_config "$repo/.config/vimrc" "$HOME/.vimrc"
