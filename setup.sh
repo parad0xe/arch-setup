@@ -242,6 +242,8 @@ setup_dotfiles() {
     link_config "$repo_dir/dotfiles/zshrc" "$HOME/.zshrc"
     link_config "$repo_dir/dotfiles/ghostty/" "$config_dir/ghostty"
     link_config "$repo_dir/assets/wallpapers/" "$HOME/Pictures/wallpapers"
+    
+    link_config "$repo_dir/dotfiles/starship/nerd-font-symbols.toml" "$config_dir/starship.toml"
 
     log_info "Dotfiles linked successfully."
 }
@@ -354,6 +356,9 @@ main() {
 	"rofi-wayland"
 	"ffmpegthumbnailer"
 	"swww"
+	"starship"
+	"zsh-autosuggestions"
+	"zsh-syntax-highlighting"
     )
 
     for pkg in "${base_pkgs[@]}"; do

@@ -8,7 +8,7 @@
     "spacing": 4,
     "modules-left": ["hyprland/workspaces", "hyprland/window"],
     "modules-center": ["clock"],
-    "modules-right": ["pulseaudio", "network", "bluetooth", "tray"],
+    "modules-right": ["pulseaudio", "backlight", "battery", "network", "bluetooth"],
 
     "hyprland/workspaces": {
         "disable-scroll": true,
@@ -36,7 +36,7 @@
     },
     "clock": {
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
-        "format-alt": "{:%Y-%m-%d}"
+        "spacing": 10
     },
     "pulseaudio": {
         "format": "{volume}% {icon}",
@@ -46,6 +46,22 @@
             "default": ["", ""]
         },
         "on-click": "pavucontrol"
+    },
+    "backlight": {
+	"format": "{icon}  {percent}%",
+	"format-icons": ["󰃞", "󰃟", "󰃠"],
+	"on-scroll-up": "brightnessctl set +1%",
+        "on-scroll-down": "brightnessctl set 1%-"
+    },
+    "battery": {
+        "states": {
+            "warning": 20,
+            "critical": 10
+        },
+        "format": "{icon}  {capacity}%",
+        "format-charging": "󰂄  {capacity}%",
+        "format-plugged": "  {capacity}%",
+        "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
     },
     "network": {
         "format-wifi": "{essid} ({signalStrength}%) ",

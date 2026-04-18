@@ -23,4 +23,13 @@ eval "$(zoxide init zsh)"
 source /usr/share/fzf/key-bindings.zsh
 source /usr/share/fzf/completion.zsh
 
+# Activer l'auto-suggestion (historique en gris clair)
+source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+
+# Initialiser le moteur de thème Starship
+eval "$(starship init zsh)"
+
+# Activer la coloration syntaxique (commandes en vert/rouge)
+source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
 fastfetch

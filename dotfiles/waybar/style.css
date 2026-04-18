@@ -69,3 +69,32 @@ window#waybar {
 #bluetooth {
     color: #89b4fa; /* Bleu */
 }
+#battery {
+    padding: 0 10px;
+    color: #ffffff;
+}
+
+#battery.charging, #battery.plugged {
+    color: #a6e3a1; /* Vert */
+}
+
+#battery.warning:not(.charging) {
+    color: #f9e2af; /* Jaune */
+}
+
+#battery.critical:not(.charging) {
+    color: #f38ba8; /* Rouge */
+    animation-name: blink;
+    animation-duration: 0.5s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+#backlight, #tray {
+    padding: 0 10px;
+    color: #ffffff;
+}
+
+#backlight {
+    color: #f9e2af; /* Un jaune doux pour la luminosité */
+}
