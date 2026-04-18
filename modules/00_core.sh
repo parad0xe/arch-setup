@@ -72,7 +72,23 @@ run_task() {
 # Args:
 #   msg: The message to display.
 log_info() {
-    printf "\r\033[K\033[1;34m[INFO]\033[0m %s\n" "$1" > /dev/tty
+    printf "\r\033[K\033[1;34m[i]\033[0m %s\n" "$1" > /dev/tty
+}
+
+# Prints a success message to standard output.
+#
+# Args:
+#   msg: Success message to display.
+log_success() {
+    printf "\r\033[K\033[1;32m[✔]\033[0m %s\n" "$1" > /dev/tty
+}
+
+# Prints a warning message to standard output.
+#
+# Args:
+#   msg: Warning message to display.
+log_warn() {
+    printf "\r\033[K\033[1;33m[!]\033[0m %s\n" "$1" > /dev/tty
 }
 
 # Prints an error message to the standard output.
@@ -80,7 +96,7 @@ log_info() {
 # Args:
 #   msg: The error message to display.
 log_error() {
-    printf "\r\033[K\033[1;31m[ERROR]\033[0m %s\n" "$1" > /dev/tty
+    printf "\r\033[K\033[1;31m[✖]\033[0m %s\n" "$1" > /dev/tty
 }
 
 # Installs a package using pacman.
@@ -112,16 +128,24 @@ link_config() {
     local src="$1"
     local dest="$2"
 
+	local src_name=$(basename "$src")
+    local short_src="${src/$HOME/\~}"
+    local short_dest="${dest/$HOME/\~}"
+
     mkdir -p "$(dirname "$dest")"
 
     if [ -e "$dest" ] && [ ! -L "$dest" ]; then
-        log_info "Archiving existing configuration: $dest -> ${dest}.bak"
+        log_warn "Archiving configuration:
+      ├─ old: $short_dest
+      └─ bak: ${short_dest}.bak"
         mv "$dest" "${dest}.bak"
     elif [ -L "$dest" ]; then
         rm "$dest"
     fi
 
-    log_info "Creating symbolic link: $src -> $dest"
+    log_info "Linking configuration ($src_name):
+      ├─ src: $short_src
+      └─ dst: $short_dest"
     ln -s "$src" "$dest"
 }
 

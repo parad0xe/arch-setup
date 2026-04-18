@@ -73,9 +73,9 @@ _enable_sddm() {
 
 # Entry point for the graphical module.
 setup() {
-    run_task "Install Wayland stack" _install_wayland_stack
-    run_task "Install hyprlock" _install_hyprlock
-    run_task "Setup SDDM theme" _setup_sddm_theme
-    run_task "Customize SDDM" _customize_sddm "$CFG_LOCK_BG_IMG"
-    run_task "Enable SDDM service" _enable_sddm
+	run_task "Installing Wayland Stack..." _install_wayland_stack
+    run_task "Installing Hyprlock..." _install_hyprlock
+    run_task "Installing SDDM Theme..." _setup_sddm_theme
+    run_task "Configuring SDDM Visuals..." _customize_sddm "$CFG_LOCK_BG_IMG"
+    run_task "Enabling SDDM Service..." _enable_sddm
 }

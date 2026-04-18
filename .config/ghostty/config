@@ -7,5 +7,5 @@ background-opacity = 0.8
 background-blur-radius = 20
 
 window-padding-x = 15
-window-padding-y = 0
+window-padding-y = 10
 window-padding-balance = true

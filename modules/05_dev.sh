@@ -14,7 +14,7 @@ _setup_python() {
         pyenv install "$version"
         pyenv global "$version"
     else
-        log_info "Python $version is already installed."
+        log_warn "Python $version is already installed."
     fi
 }
 
@@ -32,7 +32,7 @@ _setup_node() {
         nvm use node
         nvm alias default node
     else
-        log_info "Node.js is already installed ($(node -v))."
+        log_warn "Node.js is already installed ($(node -v))."
     fi
 }
 
@@ -80,9 +80,9 @@ _install_plugins() {
 
 # Entry point for the development tools module.
 setup() {
-    run_task "Setup python" _setup_python
-    run_task "Setup nvm and Node.js" _setup_node
-    run_task "Setup Rust and tree-sitter" _setup_rust
-	run_task "Setup vim-plug" _setup_vim_plug
-	run_task "Install plugins" _install_plugins
+	run_task "Installing Python Environment..." _setup_python
+    run_task "Installing Node.js Environment..." _setup_node
+    run_task "Installing Rust Environment..." _setup_rust
+    run_task "Installing Vim Plugin Manager..." _setup_vim_plug
+    run_task "Installing Editor Plugins..." _install_plugins
 }

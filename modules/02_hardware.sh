@@ -84,14 +84,14 @@ _setup_grub_nvidia() {
         log_info "Regenerating GRUB config..."
         sudo grub-mkconfig -o /boot/grub/grub.cfg
     else
-        log_info "GRUB is already configured for NVIDIA DRM."
+        log_warn "GRUB is already configured for NVIDIA DRM."
     fi
 }
 
 setup() {
-    run_task "Setup networking" _setup_network
-    run_task "Setup audio stack" _setup_audio
-    run_task "Setup Bluetooth" _setup_bluetooth
-    run_task "Setup NVIDIA drivers" _setup_nvidia
-    run_task "Setup GRUB for NVIDIA" _setup_grub_nvidia
+	run_task "Installing Networking Tools..." _setup_network
+    run_task "Installing Audio Stack..." _setup_audio
+    run_task "Installing Bluetooth Tools..." _setup_bluetooth
+    run_task "Installing NVIDIA Drivers..." _setup_nvidia
+    run_task "Configuring GRUB for NVIDIA..." _setup_grub_nvidia
 }

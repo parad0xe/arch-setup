@@ -38,7 +38,7 @@ _setup_zsh() {
         RUNZSH=no CHSH=yes sh -c "$(curl -fsSL "$script")"
         log_info "Oh My Zsh installed successfully."
     else
-        log_info "Oh My Zsh is already installed."
+        log_warn "Oh My Zsh is already installed."
     fi
 }
 
@@ -61,7 +61,7 @@ _install_user_apps() {
 }
 
 setup() {
-    run_task "Install CLI tools" _install_cli_tools
-    run_task "Setup Oh My Zsh" _setup_zsh
-    run_task "Install user graphical apps" _install_user_apps
+	run_task "Installing CLI Tools..." _install_cli_tools
+    run_task "Installing Oh My Zsh..." _setup_zsh
+    run_task "Installing Graphical Apps..." _install_user_apps
 }

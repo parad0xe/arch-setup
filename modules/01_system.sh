@@ -9,9 +9,8 @@ _enable_multilib() {
         log_info "Uncommenting [multilib] section..."
         sudo sed -i '/^#\[multilib\]/{s/^#//;n;s/^#//}' "$conf"
         sudo pacman -Sy --noconfirm
-        log_info "Multilib enabled successfully."
     else
-        log_info "Multilib is already enabled."
+        log_warn "Multilib is already enabled."
     fi
 }
 
@@ -47,7 +46,7 @@ _install_system_packages() {
 _install_yay() {
     log_info "Checking for AUR helper (yay)..."
     if command -v yay &>/dev/null; then
-        log_info "yay is already installed."
+        log_warn "yay is already installed."
         return
     fi
 
@@ -61,13 +60,12 @@ _install_yay() {
 
     cd "$HOME" || exit
     rm -rf "$build_dir"
-    log_info "yay installed successfully."
 }
 
 # Entry point for the system module.
 setup() {
-    run_task "Enable multilib" _enable_multilib
-    run_task "Update system" _update_system
-    run_task "Install system packages" _install_system_packages
-    run_task "Install yay" _install_yay
+	run_task "Enabling Multilib Repository..." _enable_multilib
+    run_task "Updating System Packages..." _update_system
+    run_task "Installing Core Packages..." _install_system_packages
+    run_task "Installing AUR Helper (yay)..." _install_yay
 }

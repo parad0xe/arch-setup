@@ -13,10 +13,9 @@ _setup_ssh_key() {
     chmod 700 "$HOME/.ssh"
 
     if [ -f "$key_path" ]; then
-        log_info "SSH key already exists at $key_path."
+        log_warn "SSH key already exists at $key_path."
     else
         ssh-keygen -t ed25519 -C "$email" -f "$key_path" -N ""
-        log_info "SSH key generated successfully."
     fi
 }
 
@@ -78,8 +77,8 @@ _setup_dotfiles() {
 
 # Entry point for the configuration module.
 setup() {
-    run_task "Setup SSH Key" _setup_ssh_key "$CFG_EMAIL"
-    run_task "Setup Git" _setup_git "$CFG_GIT_USER" "$CFG_EMAIL"
-    run_task "Setup Timezone" _setup_time "$CFG_TIMEZONE"
-    run_task "Deploy Dotfiles" _setup_dotfiles
+	run_task "Generating SSH Key..." _setup_ssh_key "$CFG_EMAIL"
+    run_task "Configuring Git Settings..." _setup_git "$CFG_GIT_USER" "$CFG_EMAIL"
+    run_task "Configuring System Timezone..." _setup_time "$CFG_TIMEZONE"
+    run_task "Deploying User Dotfiles..." _setup_dotfiles
 }
