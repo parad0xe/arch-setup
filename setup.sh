@@ -241,6 +241,7 @@ setup_dotfiles() {
 
     link_config "$repo_dir/dotfiles/zshrc" "$HOME/.zshrc"
     link_config "$repo_dir/dotfiles/ghostty/" "$config_dir/ghostty"
+    link_config "$repo_dir/assets/wallpapers/" "$HOME/Pictures/wallpapers"
 
     log_info "Dotfiles linked successfully."
 }
@@ -350,6 +351,8 @@ main() {
 	"fastfetch"
 	"wl-clipboard"
 	"libnotify"
+	"rofi-wayland"
+	"ffmpegthumbnailer"
     )
 
     for pkg in "${base_pkgs[@]}"; do
@@ -358,6 +361,8 @@ main() {
 
 
     install_yay
+
+    install_aur_pkg "mpvpaper"
 
     # 1. Hardware and Services
     setup_essential_services
