@@ -9,7 +9,7 @@ clipboard_notification() {
 
     wl-paste --watch bash -c "
         if [ -f $flag ]; then
-            notify-send -t $timeout '$title' 'Content copied to clipboard'
+            notify-send -t $timeout 'Content copied to clipboard'
         else
             touch $flag
         fi

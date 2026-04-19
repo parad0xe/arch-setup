@@ -15,7 +15,7 @@ Plug 'rmagatti/goto-preview'
 Plug 'nvim-treesitter/nvim-treesitter'
 Plug 'camAtGitHub/pydochide.nvim'
 Plug 'hardyrafael17/norminette42.nvim'
-Plug 'cacharle/c_formatter_42.vim'
+"Plug 'cacharle/c_formatter_42.vim'
 Plug 'folke/flash.nvim'
 
 " code -> lsp
