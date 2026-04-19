@@ -48,13 +48,13 @@ _install_user_apps() {
     install_aur_pkg "brave-bin"
 
     local fm_pkgs=(
+		"discord"
         "thunar"
         "thunar-archive-plugin"
         "gvfs"
         "file-roller"
     )
 
-    log_info "Installing file manager and plugins..."
     for pkg in "${fm_pkgs[@]}"; do
         install_pkg "$pkg"
     done
