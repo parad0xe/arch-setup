@@ -32,7 +32,24 @@ On a fresh Arch Linux installation, run the following command:
 ```bash
 git clone git@github.com:parad0xe/arch-setup.git ~/.dotfiles
 cd ~/.dotfiles
-./install.sh
+./setup.sh
+```
+
+### Options
+
+```txt
+Usage: ./setup.sh [options]
+
+Options:
+-l, --list            List all available modules
+-m, --module <name>   Run only a specific module (e.g., dev)
+-r, --resume <name>   Resume installation from a specific module
+-h, --help            Show this help message
+
+Examples:
+./setup.sh --list
+./setup.sh -m graphical
+./setup.sh --resume dev
 ```
 
 ## Notes
