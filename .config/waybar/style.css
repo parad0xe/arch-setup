@@ -11,6 +11,12 @@
 window#waybar {
     background-color: transparent;
 }
+#window.empty {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
 
 /* 2. On crée le design de la "pilule" (fond, arrondi, ombres) */
 .modules-left > widget > *,
@@ -97,4 +103,13 @@ window#waybar {
 
 #backlight {
     color: #f9e2af; /* Un jaune doux pour la luminosité */
+}
+
+#cpu {
+    color: #8839ef;
+    background-color: #1e1e2e;
+    padding: 0 10px;
+    border-radius: 8px;
+    margin: 4px 0;
+    font-weight: bold;
 }

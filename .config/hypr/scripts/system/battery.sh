@@ -23,6 +23,8 @@ monitor_battery() {
 	
 	local lock_warning=false
 	local lock_critical=false
+	# Store the previous capacity to detect percentage drops.
+	local last_capacity=$(cat "$bat_path/capacity")
 
 	while true; do
 		if [ -d "$bat_path" ]; then
@@ -33,20 +35,28 @@ monitor_battery() {
 				# Trigger critical alert if below threshold and unlocked.
 				if [ "$capacity" -le "$critical" ] && [ "$lock_critical" = false ]; then
 					play_alert "dialog-error"
-					notify-send -c battery-critical -u critical "Battery Critical" "Level: ${capacity}%"
+					notify-send -c battery-critical -u critical -h string:x-canonical-private-synchronous:battery "Battery Low" "Level: ${capacity}%"
 					lock_critical=true
 					lock_warning=true
 				# Trigger warning alert if below threshold and unlocked.
 				elif [ "$capacity" -le "$warning" ] && [ "$capacity" -gt "$critical" ] && [ "$lock_warning" = false ]; then
 					play_alert "dialog-warning"
-					notify-send -c battery-warning -u normal "Battery Low" "Level: ${capacity}%"
+					notify-send -c battery-warning -u normal -h string:x-canonical-private-synchronous:battery "Battery Warning" "Level: ${capacity}%"
 					lock_warning=true
+				fi
+
+				# Play an alert for every percentage drop below the 5% floor.
+				if [ "$capacity" -le 5 ] && [ "$capacity" -lt "$last_capacity" ]; then
+					play_alert "message-new-instant"
+					notify-send -c battery-critical -u critical -h string:x-canonical-private-synchronous:battery "Battery Critical" "Level: ${capacity}%"
 				fi
 			elif [ "$status" = "Charging" ] || [ "$status" = "Full" ]; then
 				# Reset notification locks when the device is plugged in.
 				lock_warning=false
 				lock_critical=false
 			fi
+			# Update the tracking variable for the next iteration.
+			last_capacity=$capacity
 		fi
 		# Wait for 60 seconds before checking the battery again.
 		sleep 60

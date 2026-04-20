@@ -8,7 +8,7 @@
     "spacing": 4,
     "modules-left": ["hyprland/workspaces", "hyprland/window"],
     "modules-center": ["clock"],
-    "modules-right": ["pulseaudio", "backlight", "battery", "network", "bluetooth"],
+    "modules-right": ["cpu", "pulseaudio", "backlight", "battery", "network", "bluetooth"],
 
     "hyprland/workspaces": {
         "disable-scroll": true,
@@ -31,9 +31,16 @@
             "(.*) - Mozilla Firefox": "Firefox",
             "(.*) - Discord": "Discord",
             "ghostty": "Terminal",
-            "(.*) - YouTube(.*)": "YouTube"
+            "(.*) - YouTube(.*)": "YouTube",
+			"^$": ""
         }
     },
+	"cpu": {
+		"interval": 5,
+		"format": "  {usage}%",
+		"max-length": 10,
+		"on-click": "alacritty -e btop" 
+	},
     "clock": {
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
         "spacing": 10
