@@ -23,16 +23,17 @@
         }
     },
     "hyprland/window": {
-        "format": "{}",
+        "format": "{title}",
         "max-length": 50,
         "separate-outputs": true,
+		"icon": false,
         "rewrite": {
+			"^$": "",
             "(.*) - Brave": "Brave",
             "(.*) - Mozilla Firefox": "Firefox",
             "(.*) - Discord": "Discord",
             "ghostty": "Terminal",
-            "(.*) - YouTube(.*)": "YouTube",
-			"^$": ""
+            "(.*) - YouTube(.*)": "YouTube"
         }
     },
 	"cpu": {

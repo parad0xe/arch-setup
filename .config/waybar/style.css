@@ -11,11 +11,28 @@
 window#waybar {
     background-color: transparent;
 }
-#window.empty {
-    background-color: transparent;
+#window.empty,
+window#waybar.empty #window {
+    background: transparent;
     border: none;
-    padding: 0;
     margin: 0;
+    padding: 0;
+    opacity: 0;
+}
+
+/* On s'assure que le label à l'intérieur ne prend aucun espace */
+#window.empty label {
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* Optionnel : si tu as un module par défaut pour tous les modules, 
+   assure-toi que #window.empty ne l'hérite pas */
+#window.empty label {
+    margin: 0;
+    padding: 0;
 }
 
 /* 2. On crée le design de la "pilule" (fond, arrondi, ombres) */
@@ -107,9 +124,5 @@ window#waybar {
 
 #cpu {
     color: #8839ef;
-    background-color: #1e1e2e;
-    padding: 0 10px;
-    border-radius: 8px;
-    margin: 4px 0;
     font-weight: bold;
 }
