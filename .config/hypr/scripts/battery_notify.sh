@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# Play a system alert sound without blocking the script execution.
+# sound_name: name of the freedesktop sound file without extension
+play_alert() {
+	local sound_name="$1"
+	local path="/usr/share/sounds/freedesktop/stereo"
+	
+	# Vérifie que paplay existe et que le son est présent
+	if command -v paplay &>/dev/null && [ -f "$path/$sound_name.oga" ]; then
+		paplay "$path/$sound_name.oga" &
+	fi
+}
+
 # Monitor battery level and send notifications on low capacity.
 # warning: percentage threshold for standard low battery warning
 # critical: percentage threshold for critical battery warning
@@ -18,23 +30,22 @@ monitor_battery() {
 
 			if [ "$status" = "Discharging" ]; then
 				if [ "$capacity" -le "$critical" ] && [ "$lock_critical" = false ]; then
+					play_alert "dialog-error"
 					notify-send -u critical "Battery Critical" "Level at ${capacity}%!"
 					lock_critical=true
 					lock_warning=true
 				elif [ "$capacity" -le "$warning" ] && [ "$capacity" -gt "$critical" ] && [ "$lock_warning" = false ]; then
+					play_alert "dialog-warning"
 					notify-send -u normal "Battery Low" "Level at ${capacity}%."
 					lock_warning=true
 				fi
 			elif [ "$status" = "Charging" ] || [ "$status" = "Full" ]; then
-				# Reset locks when plugged in
 				lock_warning=false
 				lock_critical=false
 			fi
 		fi
-		# Check every 60 seconds
 		sleep 60
 	done
 }
 
-# Start monitoring with Warning at 20% and Critical at 10%
 monitor_battery 20 10

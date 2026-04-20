@@ -21,7 +21,7 @@ font=JetBrainsMono Nerd Font 10
 format=<b>%s</b>\n<span size="xx-small">\n</span>%b
 
 # --- PROGRESS BAR (Volume/Brightness) ---
-progress-color=#89b4fa
+progress-color=#89b4faCC
 
 # --- BEHAVIOR ---
 default-timeout=3000
