@@ -16,6 +16,7 @@ _install_cli_tools() {
 		"starship"
 		"zsh-autosuggestions"
 		"zsh-syntax-highlighting"
+		"krita"
     )
 
     log_info "Installing CLI tools..."
