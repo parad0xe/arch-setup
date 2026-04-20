@@ -1,0 +1,46 @@
+/* Custom Rofi theme for Password Input */
+
+* {
+    bg: #1e1e2e;
+    bg-alt: #313244;
+    fg: #cdd6f4;
+    accent: #89b4fa;
+    
+    background-color: transparent;
+    text-color: @fg;
+    font: "JetBrainsMono Nerd Font 11";
+}
+
+window {
+    width: 500px;
+    background-color: @bg;
+    border: 2px solid;
+    border-color: @accent;
+    border-radius: 8px;
+    padding: 15px;
+    location: center;
+}
+
+/* On masque tout le reste pour ne garder que la barre d'input */
+mainbox {
+    children: [ inputbar ]; 
+}
+
+inputbar {
+    background-color: @bg-alt;
+    border-radius: 6px;
+    padding: 10px 15px;
+    spacing: 15px;
+    children: [ prompt, entry ];
+}
+
+prompt {
+    text-color: @accent;
+    font: "JetBrainsMono Nerd Font 12";
+}
+
+entry {
+    placeholder: "Enter password...";
+    placeholder-color: #6c7086;
+    cursor: text;
+}

@@ -15,6 +15,7 @@ alias ll="eza -lah --icons always --group-directories-first"
 alias cat="bat"
 alias tree="tree -a --dirsfirst -I .git/"
 alias cdmk="cd $(mktemp -d)"
+alias vim="nvim"
 
 export PATH="$HOME/.cargo/bin:$PATH"
 

@@ -54,3 +54,48 @@ default-timeout=2000
 border-color=#f38ba8
 text-color=#f38ba8
 default-timeout=0
+
+# --- CATEGORY SPECIFIC: BATTERY ---
+
+# Standard low battery warning (Orange/Peach border)
+[category=battery-warning]
+border-color=#fab387
+default-timeout=0
+ignore-timeout=1
+
+# Critical battery alert (Red border)
+[category=battery-critical]
+border-color=#f38ba8
+default-timeout=0
+ignore-timeout=1
+
+# --- CATEGORY SPECIFIC: VOLUME ---
+# Style pour le son (bleu profond, disparition rapide)
+[category=volume]
+default-timeout=1500
+progress-color=source #7aa2f7
+
+# --- CATEGORY SPECIFIC: BRIGHTNESS ---
+# Style pour l'écran (jaune chaleureux, disparition rapide)
+[category=brightness]
+default-timeout=1500
+progress-color=source #8839ef
+
+# --- CATEGORY SPECIFIC: CLIPBOARD ---
+[category=clipboard]
+border-color=#6c7086
+default-timeout=1500
+
+# --- CATEGORY SPECIFIC: WI-FI ---
+
+[category=wifi-scan]
+border-color=#a6e3a1
+default-timeout=40000
+
+[category=wifi-auth]
+border-color=#a6e3a1
+default-timeout=40000
+
+[category=wifi-result]
+border-color=#a6e3a1
+default-timeout=3000
