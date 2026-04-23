@@ -3,7 +3,7 @@
 local mason_lsp_ok, mason_lspconfig = pcall(require, "mason-lspconfig")
 if mason_lsp_ok then
     mason_lspconfig.setup({
-		ensure_installed = { "clangd" },
+		ensure_installed = { "clangd", "pyright" },
 	})
 end
 
@@ -23,6 +23,12 @@ if vim.fn.executable('pyright') == 1 then
 			},
 		},
 	})
+
+	vim.lsp.enable('pyright')
+end
+
+if vim.fn.executable('ruff') == 1 then
+    vim.lsp.enable('ruff', false)
 end
 
 if vim.fn.executable('clangd') == 1 then

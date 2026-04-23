@@ -2,10 +2,7 @@
 
 # Installs pyenv for Python version management.
 _setup_python() {
-	log_info "Installing uv..."
 	install_pkg "uv"
-
-    log_info "Installing pyenv..."
     install_pkg "pyenv"
 
 	log_info "Detecting latest stable Python version..."
@@ -19,11 +16,13 @@ _setup_python() {
     else
         log_warn "Python $version is already installed."
     fi
+
+	log_info "Installing pip dependencies..."
+	python3 -m pip install pyright flake8 mypy
 }
 
 # Installs nvm from AUR and sets up the latest Node.js version.
 _setup_node() {
-    log_info "Installing nvm from AUR..."
     install_aur_pkg "nvm"
 
     log_info "Configuring nvm and installing the latest Node.js..."
@@ -55,10 +54,10 @@ _setup_rust() {
     rustup default stable
 }
 
-# Installs vim-plug plugin manager for Vim and Neovim.
-_setup_vim_plug() {
-    log_info "Downloading vim-plug..."
-    
+_setup_tui_ide() {
+	install_pkg "neovim"
+
+	log_info "Downloading vim-plug..."
     local url="https://raw.githubusercontent.com/junegunn"
     url="$url/vim-plug/master/plug.vim"
     
@@ -70,22 +69,15 @@ _setup_vim_plug() {
     # For standard Vim
     local vim_dest="$HOME/.vim/autoload/plug.vim"
     curl -fLo "$vim_dest" --create-dirs "$url"
-}
 
-# Automatically installs plugins defined in configuration files.
-#
-# Args:
-#   None
-_install_plugins() {
     log_info "Running PlugInstall for Neovim..."
     nvim +PlugInstall +qall > /dev/null 2>&1
 }
 
 # Entry point for the development tools module.
 setup() {
+	run_task "Installing Neovim Environment..." _setup_tui_ide
 	run_task "Installing Python Environment..." _setup_python
     run_task "Installing Node.js Environment..." _setup_node
     run_task "Installing Rust Environment..." _setup_rust
-    run_task "Installing Vim Plugin Manager..." _setup_vim_plug
-    run_task "Installing Editor Plugins..." _install_plugins
 }

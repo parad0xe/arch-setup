@@ -5,7 +5,7 @@ local conform_ok, conform = pcall(require, "conform")
 if conform_ok then
 	conform.setup({
 		formatters_by_ft = {
-			python = { "ruff_organize_imports", "ruff_fix", "ruff_format", "yapf" },
+			python = { "ruff_organize_imports", "ruff_fix", "ruff_format", "custom_yapf" },
 		},
 
 		formatters = {
@@ -17,8 +17,9 @@ if conform_ok then
 					"-",
 				},
 			},
-			yapf = {
-				prepend_args = {
+			custom_yapf = {
+				command = "yapf",
+				args = {
 					"--style",
 					"{" ..
 						"BASED_ON_STYLE: google," ..
@@ -36,8 +37,10 @@ if conform_ok then
 						"SPLIT_BEFORE_FIRST_ARGUMENT: true," ..
 						"SPLIT_COMPLEX_COMPREHENSION: true," ..
 						"SPLIT_PENALTY_AFTER_OPENING_BRACKET: 10000000" ..
-					"}"
+					"}",
+					"$FILENAME"
 				},
+				stdin = false,
 			},
 		},
 
