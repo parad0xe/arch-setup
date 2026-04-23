@@ -5,11 +5,12 @@ local conform_ok, conform = pcall(require, "conform")
 if conform_ok then
 	conform.setup({
 		formatters_by_ft = {
-			python = { "ruff_organize_imports", "ruff_fix", "ruff_format", "custom_yapf" },
+			python = { "ruff_organize_imports", "ruff_fix", "custom_ruff_format", "custom_yapf" },
 		},
 
 		formatters = {
-			ruff_format = {
+			custom_ruff_format = {
+				command = "ruff",
 				args = {
 					"format",
 					"--line-length", "79",
@@ -23,19 +24,19 @@ if conform_ok then
 					"--style",
 					"{" ..
 						"BASED_ON_STYLE: google," ..
-						"COALESCE_BRACKETS: true," ..
+						"COALESCE_BRACKETS: True," ..
 						"COLUMN_LIMIT: 79," ..
-						"DEDENT_CLOSING_BRACKETS: true," ..
+						"DEDENT_CLOSING_BRACKETS: True," ..
 						"INDENT_WIDTH: 4," ..
 						"SPACES_BEFORE_COMMENT: 2," ..
-						"SPACES_AROUND_POWER_OPERATOR: true," ..
-						"SPLIT_ALL_COMMA_SEPARATED_VALUES: false," ..
-						"SPLIT_ALL_TOP_LEVEL_COMMA_SEPARATED_VALUES: true," ..
-						"SPLIT_BEFORE_DOT: true," ..
-						"SPLIT_BEFORE_DICT_SET_GENERATOR: true," ..
-						"SPLIT_BEFORE_EXPRESSION_AFTER_OPENING_PAREN: true," ..
-						"SPLIT_BEFORE_FIRST_ARGUMENT: true," ..
-						"SPLIT_COMPLEX_COMPREHENSION: true," ..
+						"SPACES_AROUND_POWER_OPERATOR: True," ..
+						"SPLIT_ALL_COMMA_SEPARATED_VALUES: False," ..
+						"SPLIT_ALL_TOP_LEVEL_COMMA_SEPARATED_VALUES: True," ..
+						"SPLIT_BEFORE_DOT: True," ..
+						"SPLIT_BEFORE_DICT_SET_GENERATOR: True," ..
+						"SPLIT_BEFORE_EXPRESSION_AFTER_OPENING_PAREN: True," ..
+						"SPLIT_BEFORE_FIRST_ARGUMENT: True," ..
+						"SPLIT_COMPLEX_COMPREHENSION: True," ..
 						"SPLIT_PENALTY_AFTER_OPENING_BRACKET: 10000000" ..
 					"}",
 					"$FILENAME"
@@ -45,12 +46,12 @@ if conform_ok then
 		},
 
 		format_on_save = {
-			lsp_fallback = true,
+			lsp_fallback = false,
 			timeout_ms = 1000,
 		},
 	})
 
 	keymap({ "n", "v" }, "<C-l>", function()
-		conform.format({ async = true, lsp_fallback = true })
+		conform.format({ async = true, lsp_fallback = false })
 	end, { desc = "Format file (yapf + ruff)" })
 end
