@@ -29,3 +29,17 @@ require('config.appearance.animations')
 
 -- Tools
 require('config.tools.terminal')
+
+local diagnostics_active = true
+
+vim.api.nvim_create_user_command('ToggleDiag', function()
+    diagnostics_active = not diagnostics_active
+    if diagnostics_active then
+        vim.diagnostic.enable(true)
+        print("Diagnostics activés")
+    else
+        vim.diagnostic.enable(false)
+        print("Diagnostics désactivés")
+    end
+end, { desc = "Active ou désactive l'affichage des erreurs" })
+keymap('n', " [[", "<cmd>ToggleDiag<cr>")
