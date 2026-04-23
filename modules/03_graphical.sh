@@ -15,6 +15,7 @@ _install_wayland_stack() {
         "qt5-graphicaleffects"
         "qt5-svg"
         "qt5-quickcontrols2"
+		"socat"
     )
 
     log_info "Installing Wayland stack..."
