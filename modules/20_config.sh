@@ -65,6 +65,7 @@ _setup_dotfiles() {
 
     link_config "$repo/.config/zshrc" "$HOME/.zshrc"
     link_config "$repo/.config/vimrc" "$HOME/.vimrc"
+    link_config "$repo/.config/ssh/config" "$HOME/.ssh/config"
 
     local starship="$repo/.config/starship/nerd-font-symbols.toml"
     link_config "$starship" "$conf_dir/starship.toml"
