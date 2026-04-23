@@ -2,6 +2,9 @@
 
 # Installs pyenv for Python version management.
 _setup_python() {
+	log_info "Installing uv..."
+	install_pkg "uv"
+
     log_info "Installing pyenv..."
     install_pkg "pyenv"
 
