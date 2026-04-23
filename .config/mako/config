@@ -13,7 +13,8 @@ width=280
 background-color=#1e1e2ed6
 text-color=#cdd6f4
 border-size=1
-border-color=#b4befe
+#border-color=#b4befe
+border-color=#89b4fa
 border-radius=8
 font=JetBrainsMono Nerd Font 10
 
@@ -25,7 +26,7 @@ progress-color=#89b4faCC
 
 # --- BEHAVIOR ---
 default-timeout=3000
-ignore-timeout=1
+ignore-timeout=0
 max-visible=3
 sort=-time
 
