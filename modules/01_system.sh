@@ -34,6 +34,7 @@ _install_system_packages() {
         "vim"
         "tree"
 		"zsh"
+		"ncdu"
     )
 
     log_info "Installing base system packages..."
