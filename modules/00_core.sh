@@ -67,6 +67,20 @@ run_task() {
     fi
 }
 
+# Prompts the user for secure input (like passwords) directly via the TTY.
+#
+# Args:
+#   prompt_msg: The question or prompt to display to the user.
+#   return_var: The name of the variable where the input will be stored.
+getpass() {
+    local prompt_msg="$1"
+	declare -n ref_var="$2"
+
+    printf "\r\033[K\033[1;34m[i]\033[0m %s " "$prompt_msg" > /dev/tty 
+    read -s ref_var < /dev/tty
+    printf "\n" > /dev/tty
+}
+
 # Prints an informational message to the standard output.
 #
 # Args:

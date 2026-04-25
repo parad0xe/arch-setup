@@ -12,10 +12,14 @@ _setup_ssh_key() {
     mkdir -p "$HOME/.ssh"
     chmod 700 "$HOME/.ssh"
 
+
     if [ -f "$key_path" ]; then
         log_warn "SSH key already exists at $key_path."
     else
-        ssh-keygen -t ed25519 -C "$email" -f "$key_path" -N ""
+		local passphrase
+		getpass "Please enter your SSH passphrase (or press Enter for none):" passphrase
+        ssh-keygen -t ed25519 -C "$email" -f "$key_path" -N "$passphrase"
+		unset passphrase
     fi
 }
 
