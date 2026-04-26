@@ -17,6 +17,7 @@ Plug 'camAtGitHub/pydochide.nvim'
 Plug 'hardyrafael17/norminette42.nvim'
 "Plug 'cacharle/c_formatter_42.vim'
 Plug 'folke/flash.nvim'
+Plug 'mg979/vim-visual-multi', {'branch': 'master'}
 
 " code -> lsp
 Plug 'mason-org/mason.nvim'
