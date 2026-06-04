@@ -47,6 +47,9 @@ _setup_zsh() {
 _install_user_apps() {
     log_info "Installing web browser (Brave)..."
     install_aur_pkg "brave-bin"
+    
+	log_info "Installing jetbrains toolbox..."
+    install_aur_pkg "jetbrains-toolbox"
 
     local fm_pkgs=(
 		"discord"
