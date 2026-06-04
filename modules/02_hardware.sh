@@ -88,10 +88,20 @@ _setup_grub_nvidia() {
     fi
 }
 
+_setup_securitykey() {
+	log_info "Installing Smartcard packages..."
+    install_pkg "pcsclite"
+    install_pkg "ccid"
+
+    log_info "Enabling pcscd service..."
+    sudo systemctl enable --now pcscd.service
+}
+
 setup() {
 	run_task "Installing Networking Tools..." _setup_network
     run_task "Installing Audio Stack..." _setup_audio
     run_task "Installing Bluetooth Tools..." _setup_bluetooth
     run_task "Installing NVIDIA Drivers..." _setup_nvidia
     run_task "Configuring GRUB for NVIDIA..." _setup_grub_nvidia
+	run_task "Configuring Smartcard Services..." _setup_securitykey
 }

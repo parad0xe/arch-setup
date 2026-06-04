@@ -59,10 +59,19 @@ _install_user_apps() {
         "thunar-archive-plugin"
         "gvfs"
         "file-roller"
+		"keypass"
     )
 
     for pkg in "${fm_pkgs[@]}"; do
         install_pkg "$pkg"
+    done
+
+	fm_pkgs=(
+		"yubico-authenticator-bin"
+    )
+
+    for pkg in "${fm_pkgs[@]}"; do
+        install_aur_pkg "$pkg"
     done
 }
 
