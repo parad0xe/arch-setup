@@ -9,6 +9,8 @@ _install_cli_tools() {
         "bat"
         "fastfetch"
 		"wl-clipboard"
+		"grim"
+		"slurp"
 		"libnotify"
 		"rofi-wayland"
 		"ffmpegthumbnailer"
