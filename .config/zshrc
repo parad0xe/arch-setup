@@ -16,9 +16,14 @@ alias cat="bat -p"
 alias tree="tree -a --dirsfirst -I .git/"
 alias cdmk="cd $(mktemp -d)"
 alias vim="nvim"
+alias py="python3"
 
-export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+export PATH="/usr/local/go/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+
+export EDITOR="vim"
+export VISUAL="vim"
+export SUDO_EDITOR="vim"
 
 # --- PYENV ---
 export PYENV_ROOT="$HOME/.pyenv"
