@@ -1,4 +1,13 @@
+Host my-server
+    HostName 192.0.2.10
+    User parad0xe
+    IdentityFile ~/.ssh/id_ed25519_sk
+    IdentitiesOnly yes
+    IdentityAgent none
+
 Host *
     AddKeysToAgent yes
     IgnoreUnknown UseKeychain
-    IdentityFile ~/.ssh/id_ed25519
+	IdentityFile ~/.ssh/id_ed25519_sk
+    IdentitiesOnly yes
+    IdentityAgent none
