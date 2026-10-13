@@ -14,7 +14,7 @@ _install_cli_tools() {
 		"satty"
 		"playerctl"
 		"libnotify"
-		"rofi-wayland"
+		"rofi"
 		"ffmpegthumbnailer"
 		"awww"
 		"brightnessctl"
