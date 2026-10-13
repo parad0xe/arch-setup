@@ -1,5 +1,39 @@
 #!/bin/bash
 
+# Builds Ghostty from the AUR (ghostty-git) on ARM, where it is not packaged.
+# Its PKGBUILD is fixed first:
+#   - zig 0.16 extracts the fetched packages into zig-pkg/ in the sources
+#     and only keeps their archives in the cache where the PKGBUILD looks;
+#   - ncurses already ships the "ghostty" terminfo entry, so only
+#     "xterm-ghostty" is packaged, like the official ghostty-terminfo.
+_build_ghostty_git() {
+    if command -v ghostty &>/dev/null; then
+        log_warn "Ghostty is already installed."
+        return
+    fi
+
+    # Provides pandoc-cli, a build dependency missing from the ARM repositories
+    install_aur_pkg "pandoc-bin"
+
+    local build_dir="$HOME/.cache/ghostty-git-build"
+    rm -rf "$build_dir"
+
+    git clone https://aur.archlinux.org/ghostty-git.git "$build_dir"
+    cd "$build_dir" || exit
+
+    sed -i 's|"$srcdir/zig-global-cache/p"|"$srcdir/$_pkgbase/zig-pkg"|' PKGBUILD
+    sed -i 's|build/usr/share/terminfo/\*|build/usr/share/terminfo/x|' PKGBUILD
+    makepkg -s --noconfirm
+
+    # Installs the terminal and its dependencies, not the Nautilus extension
+    local pkgs
+    mapfile -t pkgs < <(makepkg --packagelist | grep -E '/ghostty-(shell-integration-|terminfo-)?git-[0-9]')
+    sudo pacman -U --noconfirm "${pkgs[@]}"
+
+    cd "$HOME" || exit
+    rm -rf "$build_dir"
+}
+
 # Installs essential command-line tools and utilities.
 _install_cli_tools() {
     local tools=(
@@ -32,10 +66,7 @@ _install_cli_tools() {
 
     log_info "Installing Ghostty terminal..."
     if is_arm; then
-        # Not packaged for ARM: built from the AUR. pandoc-bin provides
-        # pandoc-cli, a build dependency missing from the ARM repositories.
-        install_aur_pkg "pandoc-bin"
-        install_aur_pkg "ghostty-git"
+        _build_ghostty_git
     else
         install_pkg "ghostty"
     fi
