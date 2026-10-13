@@ -98,6 +98,14 @@ _setup_securitykey() {
     sudo systemctl enable --now pcscd.service
 }
 
+# Installs ddcutil to set external monitor brightness over DDC/CI. The
+# package loads i2c-dev at boot and grants the logged-in user access to
+# the monitors' i2c buses.
+_setup_monitor_control() {
+    log_info "Installing ddcutil..."
+    install_pkg "ddcutil"
+}
+
 setup() {
 	run_task "Installing Networking Tools..." _setup_network
     run_task "Installing Audio Stack..." _setup_audio
@@ -105,4 +113,5 @@ setup() {
     run_task "Installing NVIDIA Drivers..." _setup_nvidia
     run_task "Configuring GRUB for NVIDIA..." _setup_grub_nvidia
 	run_task "Configuring Smartcard Services..." _setup_securitykey
+    run_task "Installing Monitor Control Tools..." _setup_monitor_control
 }

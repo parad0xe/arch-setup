@@ -169,8 +169,8 @@ window#waybar.empty #window {
     to   { opacity: 0.3; }
 }
 
-/* ── Backlight ───────────────────────────── */
-#backlight {
+/* ── Brightness ──────────────────────────── */
+#custom-brightness {
     color: #9a80c0;
 }
 
