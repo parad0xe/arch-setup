@@ -1,6 +1,24 @@
 #!/bin/bash
 
-set -e
+set -Ee
+
+_on_error() {
+    local exit_code=$?
+    local failed_cmd="$BASH_COMMAND"
+    trap - ERR
+    set +e
+
+    printf '\n\033[1;31m[✗] Échec (code %d) : %s\033[0m\n' "$exit_code" "$failed_cmd" >&2
+    local i
+    for ((i = 0; i < ${#FUNCNAME[@]} - 1; i++)); do
+        printf '    à %s() — %s:%s\n' \
+            "${FUNCNAME[i+1]}" \
+            "${BASH_SOURCE[i+1]#"$SETUP_DIR"/}" \
+            "${BASH_LINENO[i]}" >&2
+    done
+    exit "$exit_code"
+}
+trap _on_error ERR
 
 export SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export ASSETS_DIR="$SETUP_DIR/assets"
