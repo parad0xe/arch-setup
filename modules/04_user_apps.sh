@@ -59,7 +59,7 @@ _install_user_apps() {
         "thunar-archive-plugin"
         "gvfs"
         "file-roller"
-		"keypass"
+		"keepass"
     )
 
     for pkg in "${fm_pkgs[@]}"; do
