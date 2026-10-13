@@ -1,16 +1,23 @@
+/* ==========================================
+   WAYBAR — 和風 (Wafū) Dark Purple Theme
+   Black × Purple × Japanese minimal
+   ========================================== */
+
 * {
     border: none;
     border-radius: 0;
     font-family: "JetBrainsMono Nerd Font", monospace;
-    font-size: 14px;
-    font-weight: bold;
+    font-size: 13px;
+    font-weight: 400;
     min-height: 0;
 }
 
-/* 1. On rend la barre principale totalement transparente */
+/* ── Bar ─────────────────────────────────── */
 window#waybar {
     background-color: transparent;
 }
+
+/* ── Empty window title ──────────────────── */
 #window.empty,
 window#waybar.empty #window {
     background: transparent;
@@ -19,8 +26,6 @@ window#waybar.empty #window {
     padding: 0;
     opacity: 0;
 }
-
-/* On s'assure que le label à l'intérieur ne prend aucun espace */
 #window.empty label {
     margin: 0;
     padding: 0;
@@ -28,101 +33,172 @@ window#waybar.empty #window {
     min-height: 0;
 }
 
-/* Optionnel : si tu as un module par défaut pour tous les modules, 
-   assure-toi que #window.empty ne l'hérite pas */
-#window.empty label {
-    margin: 0;
-    padding: 0;
-}
-
-/* 2. On crée le design de la "pilule" (fond, arrondi, ombres) */
+/* ── Pill base ───────────────────────────── */
 .modules-left > widget > *,
 .modules-center > widget > *,
 .modules-right > widget > * {
-    background-color: rgba(30, 30, 46, 0.9); /* Gris très foncé/bleuté */
-    color: #cdd6f4; /* Texte clair */
-    border-radius: 15px; /* C'est ici que se fait l'arrondi principal ! */
-    padding: 2px 15px;
-    margin-top: 5px;
-    margin-bottom: 5px;
-    margin-right: 8px; /* Espace entre les pilules */
-    border: 1px solid rgba(255, 255, 255, 0.1); /* Légère bordure lumineuse */
+    background-color: rgba(8, 6, 14, 0.92);
+    color: #c9b8e8;
+    border-radius: 14px;
+    padding: 2px 14px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    margin-right: 6px;
+    border: 1px solid rgba(138, 79, 200, 0.25);
+    box-shadow:
+        0 0 0 0.5px rgba(0,0,0,0.8),
+        inset 0 1px 0 rgba(180, 130, 255, 0.06);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-/* Enlever la marge du dernier élément pour l'alignement */
+.modules-left > widget > *:hover,
+.modules-center > widget > *:hover,
+.modules-right > widget > *:hover {
+    border-color: rgba(160, 100, 240, 0.55);
+    box-shadow:
+        0 0 8px rgba(130, 60, 220, 0.2),
+        inset 0 1px 0 rgba(180, 130, 255, 0.08);
+}
+
 .modules-right > widget:last-child > * {
     margin-right: 0;
 }
 
-/* --- ESPACES DE TRAVAIL (WORKSPACES) --- */
+/* ── Workspaces ──────────────────────────── */
 #workspaces {
-    padding: 2px 5px;
+    padding: 2px 6px;
 }
 
 #workspaces button {
-    color: #a6adc8;
-    padding: 0 8px;
-    border-radius: 10px; /* Arrondi des boutons internes */
+    color: #6b5a80;
+    padding: 0 9px;
+    border-radius: 9px;
     transition: all 0.2s ease;
+    font-size: 12px;
+    letter-spacing: 0.03em;
 }
 
 #workspaces button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
+    background-color: rgba(138, 79, 200, 0.18);
+    color: #c9b8e8;
 }
 
 #workspaces button.active {
-    background-color: #89b4fa; /* Accentuation bleue */
-    color: #11111b;
+    background-color: rgba(120, 60, 200, 0.55);
+    color: #ede0ff;
+    box-shadow: 0 0 10px rgba(140, 70, 220, 0.4);
 }
 
-/* --- COULEURS SPÉCIFIQUES (Optionnel) --- */
+#workspaces button.urgent {
+    background-color: rgba(200, 60, 100, 0.5);
+    color: #ffd0e0;
+}
+
+/* ── Window title ────────────────────────── */
+#window {
+    color: #8a6fb0;
+    font-style: italic;
+    letter-spacing: 0.04em;
+    font-size: 12px;
+}
+
+/* ── Clock ───────────────────────────────── */
 #clock {
-    color: #f38ba8; /* Rouge doux */
+    color: #d4aaff;
+    letter-spacing: 0.06em;
+    font-size: 13px;
 }
 
+/* ── CPU ─────────────────────────────────── */
+#cpu {
+    color: #b07aff;
+}
+
+/* ── Audio ───────────────────────────────── */
 #pulseaudio {
-    color: #a6e3a1; /* Vert doux */
+    color: #9d7acc;
 }
 
+#pulseaudio.muted {
+    color: #4a3a5e;
+}
+
+/* ── Network ─────────────────────────────── */
 #network {
-    color: #89dceb; /* Cyan */
+    color: #a080d0;
 }
 
+#network.disconnected {
+    color: #6b3a5a;
+}
+
+/* ── Bluetooth ───────────────────────────── */
 #bluetooth {
-    color: #89b4fa; /* Bleu */
-}
-#battery {
-    padding: 0 10px;
-    color: #ffffff;
+    color: #8a60c0;
 }
 
-#battery.charging, #battery.plugged {
-    color: #a6e3a1; /* Vert */
+#bluetooth.connected {
+    color: #c0a0ff;
+}
+
+/* ── Battery ─────────────────────────────── */
+#battery {
+    color: #c9b8e8;
+}
+
+#battery.charging,
+#battery.plugged {
+    color: #b090e8;
 }
 
 #battery.warning:not(.charging) {
-    color: #f9e2af; /* Jaune */
+    color: #c890a0;
 }
 
 #battery.critical:not(.charging) {
-    color: #f38ba8; /* Rouge */
+    color: #c05070;
     animation-name: blink;
-    animation-duration: 0.5s;
-    animation-timing-function: linear;
+    animation-duration: 0.8s;
+    animation-timing-function: ease-in-out;
     animation-iteration-count: infinite;
     animation-direction: alternate;
 }
-#backlight, #tray {
-    padding: 0 10px;
-    color: #ffffff;
+
+@keyframes blink {
+    from { opacity: 1; }
+    to   { opacity: 0.3; }
 }
 
+/* ── Backlight ───────────────────────────── */
 #backlight {
-    color: #f9e2af; /* Un jaune doux pour la luminosité */
+    color: #9a80c0;
 }
 
-#cpu {
-    color: #8839ef;
-    font-weight: bold;
+/* ── Tray ────────────────────────────────── */
+#tray {
+    padding: 0 10px;
+}
+
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+    background-color: rgba(160, 50, 100, 0.4);
+    border-radius: 8px;
+}
+
+/* ── Shutdown ────────────────────────────── */
+#custom-shutdown {
+    color: #7040a0;
+    padding: 2px 14px;
+    font-size: 15px;
+    transition: color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#custom-shutdown:hover {
+    color: #d080ff;
+    border-color: rgba(180, 80, 255, 0.5);
+    box-shadow: 0 0 12px rgba(160, 60, 255, 0.3);
 }
