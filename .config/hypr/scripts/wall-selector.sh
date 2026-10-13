@@ -6,10 +6,10 @@ _default_wall_dir="$HOME/Pictures/wallpapers"
 _theme="$HOME/.config/rofi/wallpaper.rasi"
 _change_wall="$HOME/.config/hypr/scripts/change-wall.sh"
 
-_folder_entry="📁  Change folder…"
-_parent_entry="⬆  Parent folder"
-_path_entry="⌨  Type a path…"
-_folder_prefix="📁  "
+_folder_entry="󰉋  Change folder…"
+_parent_entry="󰁝  Parent folder"
+_path_entry="󰌌  Type a path…"
+_folder_prefix="󰉋  "
 
 # Shows a text-only rofi menu (one column, no thumbnails).
 #

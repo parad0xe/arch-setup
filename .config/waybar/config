@@ -74,7 +74,7 @@
     },
     "network": {
         "format-wifi": "{essid} ({signalStrength}%) ",
-        "format-ethernet": "{ipaddr}/{cidr} ",
+        "format-ethernet": "{ipaddr}/{cidr} 󰈀",
         "format-disconnected": "Disconnected ⚠",
         "on-click": "~/.config/hypr/scripts/system/wifi.sh"
     },

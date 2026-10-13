@@ -156,10 +156,10 @@ local function preselect(direction, message)
     end
 end
 
-hl.bind(mainMod .. " + SHIFT + L", preselect("r", "◨  Next window right"))
-hl.bind(mainMod .. " + SHIFT + H", preselect("l", "◧  Next window left"))
-hl.bind(mainMod .. " + SHIFT + K", preselect("u", "⬒  Next window up"))
-hl.bind(mainMod .. " + SHIFT + J", preselect("d", "⬓  Next window down"))
+hl.bind(mainMod .. " + SHIFT + L", preselect("r", "▐  Next window right"))
+hl.bind(mainMod .. " + SHIFT + H", preselect("l", "▌  Next window left"))
+hl.bind(mainMod .. " + SHIFT + K", preselect("u", "▀  Next window up"))
+hl.bind(mainMod .. " + SHIFT + J", preselect("d", "▄  Next window down"))
 
 hl.bind(mainMod .. " + SHIFT + Space", function()
     hl.dispatch(hl.dsp.layout("preselect cancel"))
