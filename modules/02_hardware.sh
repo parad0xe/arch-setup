@@ -52,11 +52,12 @@ _setup_nvidia() {
 
     local pkgs=(
         "linux-headers"
-        "nvidia-dkms"
+        "nvidia-open-dkms"
         "nvidia-utils"
         "lib32-nvidia-utils"
         "egl-wayland"
         "nvidia-settings"
+        "nvidia-prime"
     )
 
     log_info "Installing NVIDIA drivers..."
