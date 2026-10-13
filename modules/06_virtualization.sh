@@ -43,8 +43,19 @@ _setup_firewall() {
     sudo ufw route allow in on virbr0
 }
 
+# Installs the tools used by .config/hypr/conf/vm.lua inside a VM.
+_install_guest_tools() {
+    # SPICE agent for clipboard sharing with the host
+    install_pkg "spice-vdagent"
+}
+
 # Entry point for the virtualization module.
 setup() {
+    if systemd-detect-virt --vm --quiet; then
+        run_task "Installing VM Guest Tools..." _install_guest_tools
+        return 0
+    fi
+
     run_task "Installing QEMU/KVM..." _install_qemu
     run_task "Configuring libvirt..." _setup_libvirt
     run_task "Configuring firewall for VMs..." _setup_firewall
