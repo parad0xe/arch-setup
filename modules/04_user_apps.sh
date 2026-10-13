@@ -31,7 +31,14 @@ _install_cli_tools() {
     done
 
     log_info "Installing Ghostty terminal..."
-    install_aur_pkg "ghostty"
+    if is_arm; then
+        # Not packaged for ARM: built from the AUR. pandoc-bin provides
+        # pandoc-cli, a build dependency missing from the ARM repositories.
+        install_aur_pkg "pandoc-bin"
+        install_aur_pkg "ghostty-git"
+    else
+        install_pkg "ghostty"
+    fi
 
     log_info "Installing mpvpaper (video wallpapers)..."
     install_aur_pkg "mpvpaper"
@@ -59,12 +66,8 @@ _setup_zsh() {
 _install_user_apps() {
     log_info "Installing web browser (Brave)..."
     install_aur_pkg "brave-bin"
-    
-	log_info "Installing jetbrains toolbox..."
-    install_aur_pkg "jetbrains-toolbox"
 
     local fm_pkgs=(
-		"discord"
         "thunar"
         "thunar-archive-plugin"
         "gvfs"
@@ -76,18 +79,28 @@ _install_user_apps() {
     for pkg in "${fm_pkgs[@]}"; do
         install_pkg "$pkg"
     done
+}
 
-	fm_pkgs=(
-		"yubico-authenticator-bin"
-    )
+# Installs the applications only published for x86_64.
+_install_x86_apps() {
+	log_info "Installing jetbrains toolbox..."
+    install_aur_pkg "jetbrains-toolbox"
 
-    for pkg in "${fm_pkgs[@]}"; do
-        install_aur_pkg "$pkg"
-    done
+    log_info "Installing Discord..."
+    install_pkg "discord"
+
+    log_info "Installing Yubico Authenticator..."
+    install_aur_pkg "yubico-authenticator-bin"
 }
 
 setup() {
 	run_task "Installing CLI Tools..." _install_cli_tools
     run_task "Installing Oh My Zsh..." _setup_zsh
     run_task "Installing Graphical Apps..." _install_user_apps
+
+    if is_arm; then
+        log_info "No ARM build of JetBrains Toolbox, Discord and Yubico Authenticator, skipping them."
+    else
+        run_task "Installing x86_64 Apps..." _install_x86_apps
+    fi
 }
