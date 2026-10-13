@@ -8,6 +8,6 @@ Host my-server
 Host *
     AddKeysToAgent yes
     IgnoreUnknown UseKeychain
-	IdentityFile ~/.ssh/id_ed25519_sk
+	IdentityFile ~/.ssh/id_ed25519_noV_sk
     IdentitiesOnly yes
     IdentityAgent none
