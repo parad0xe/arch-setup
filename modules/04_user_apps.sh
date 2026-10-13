@@ -11,6 +11,8 @@ _install_cli_tools() {
 		"wl-clipboard"
 		"grim"
 		"slurp"
+		"satty"
+		"playerctl"
 		"libnotify"
 		"rofi-wayland"
 		"ffmpegthumbnailer"
