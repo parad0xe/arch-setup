@@ -32,4 +32,4 @@ fi
 log_info "Launching the main installation script..."
 cd "$TARGET_DIR"
 sleep 3
-bash install.sh
+bash setup.sh
