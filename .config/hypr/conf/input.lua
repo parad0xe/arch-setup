@@ -1,0 +1,40 @@
+-- ==========================================
+-- KEYBOARD & MOUSE
+-- ==========================================
+hl.config({
+    input = {
+        kb_layout  = "gb,us",
+        kb_variant = "",
+        kb_model   = "",
+        kb_options = "",
+        kb_rules   = "",
+
+        follow_mouse = 1,
+
+        natural_scroll = false,
+        touchpad = {
+            natural_scroll = true,
+        },
+
+        repeat_delay = 250,
+        repeat_rate  = 50,
+    },
+
+    gestures = {
+        workspace_swipe_distance                 = 300,
+        workspace_swipe_invert                   = true,
+        workspace_swipe_min_speed_to_force       = 10,
+        workspace_swipe_cancel_ratio             = 0.5,
+        workspace_swipe_create_new               = false,
+        workspace_swipe_direction_lock           = false,
+        workspace_swipe_direction_lock_threshold = 10,
+        workspace_swipe_forever                  = true,
+    },
+
+    cursor = {
+        no_hardware_cursors = true,
+    },
+})
+
+-- 3-finger horizontal swipe = switch workspace left/right
+hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })

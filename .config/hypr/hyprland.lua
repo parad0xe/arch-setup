@@ -1,0 +1,7 @@
+require("conf.monitors")
+require("conf.env")
+require("conf.input")
+require("conf.layerrules")
+require("conf.visuals")
+require("conf.autostart")
+require("conf.keybinds")
