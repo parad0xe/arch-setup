@@ -6,7 +6,10 @@ the installation and configuration of a complete Arch Linux environment.
 ## Features
 
 * Modular Architecture: Scripts divided by theme (Core, Hardware, etc.).
-* NVIDIA Optimized: Automatic driver installation and DRM configuration.
+* NVIDIA Optimized: Automatic driver installation and DRM configuration
+  when an NVIDIA GPU is detected.
+* ARM Support: Runs on Arch Linux ARM (aarch64, e.g. Asahi Linux on Apple
+  Silicon); see the notes for the differences.
 * Dotfiles Management: Deployment via symbolic links to ~/.config.
 * Complete Environment: Hyprland, Waybar, ZSH, PipeWire, and Bluetooth.
 
@@ -57,3 +60,6 @@ Examples:
 
 * A reboot is required to enable NVIDIA drivers and the SDDM service.
 * Existing configurations are backed up with the .bak extension.
+* On ARM, Ghostty is compiled from the AUR (`ghostty-git`), and the apps only
+  published for x86_64 (Discord, JetBrains Toolbox, Yubico Authenticator)
+  and the QEMU/KVM host setup are skipped.

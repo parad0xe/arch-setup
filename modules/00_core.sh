@@ -120,6 +120,12 @@ log_error() {
     printf "\r\033[K\033[1;31m[✖]\033[0m %s\n" "$1" > /dev/tty
 }
 
+# Returns success on a 64-bit ARM CPU (e.g. Apple Silicon with Asahi Linux),
+# whose repositories (Arch Linux ARM) lack some x86_64 packages.
+is_arm() {
+    [ "$(uname -m)" = "aarch64" ]
+}
+
 # Installs a package using pacman.
 #
 # Args:

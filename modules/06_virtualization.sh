@@ -80,6 +80,11 @@ setup() {
         return 0
     fi
 
+    if is_arm; then
+        log_info "No UEFI firmware package for ARM VMs, skipping QEMU/KVM."
+        return 0
+    fi
+
     run_task "Installing QEMU/KVM..." _install_qemu
     run_task "Configuring libvirt..." _setup_libvirt
     run_task "Configuring firewall for VMs..." _setup_firewall

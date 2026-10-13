@@ -42,6 +42,11 @@ _setup_bluetooth() {
     sudo systemctl enable bluetooth.service
 }
 
+# Returns success when a PCI device from NVIDIA (vendor id 0x10de) is present.
+_has_nvidia_gpu() {
+    grep -qsx "0x10de" /sys/bus/pci/devices/*/vendor
+}
+
 # Installs NVIDIA drivers and configures early module loading.
 _setup_nvidia() {
     log_info "Cleaning up conflicting NVIDIA packages..."
@@ -110,8 +115,12 @@ setup() {
 	run_task "Installing Networking Tools..." _setup_network
     run_task "Installing Audio Stack..." _setup_audio
     run_task "Installing Bluetooth Tools..." _setup_bluetooth
-    run_task "Installing NVIDIA Drivers..." _setup_nvidia
-    run_task "Configuring GRUB for NVIDIA..." _setup_grub_nvidia
+    if _has_nvidia_gpu; then
+        run_task "Installing NVIDIA Drivers..." _setup_nvidia
+        run_task "Configuring GRUB for NVIDIA..." _setup_grub_nvidia
+    else
+        log_info "No NVIDIA GPU detected, skipping NVIDIA drivers."
+    fi
 	run_task "Configuring Smartcard Services..." _setup_securitykey
     run_task "Installing Monitor Control Tools..." _setup_monitor_control
 }
