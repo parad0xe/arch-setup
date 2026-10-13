@@ -51,20 +51,27 @@ run_task() {
         sleep 0.1
     done
 
-    wait "$pid"
-    local status=$?
+    # Le « || » empêche set -e de tuer le script si wait échoue :
+    # on récupère le code nous-mêmes pour pouvoir afficher l'erreur.
+    local status=0
+    wait "$pid" || status=$?
 
     tput sc
     tput cup $((lines - 1)) 0
     printf "\033[K"
     tput rc
 
-    if [ $status -eq 0 ]; then
+    if [ "$status" -eq 0 ]; then
         printf "\033[1;32m✔\033[0m  %s\n\n" "$msg"
-    else
-        printf "\033[1;31m✖\033[0m  %s (See /tmp/setup.log)\n\n" "$msg"
-        exit 1
+        return 0
     fi
+
+    local caller="${BASH_SOURCE[1]#"$SETUP_DIR"/}:${BASH_LINENO[0]}"
+    printf "\033[1;31m✖\033[0m  %s \033[2m(code %d — %s)\033[0m\n" "$msg" "$status" "$caller"
+    printf "\033[2m   ── fin de /tmp/setup.log ──\033[0m\n"
+    tail -n 25 /tmp/setup.log | sed 's/^/   │ /'
+    printf "\n"
+    exit "$status"
 }
 
 # Prompts the user for secure input (like passwords) directly via the TTY.
