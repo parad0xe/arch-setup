@@ -17,8 +17,11 @@ _setup_python() {
         log_warn "Python $version is already installed."
     fi
 
-	log_info "Installing pip dependencies..."
-	python3 -m pip install pyright flake8 mypy
+	log_info "Installing Python dev tools (pyright, flake8, mypy)..."
+	local tools=("pyright" "flake8" "mypy")
+	for tool in "${tools[@]}"; do
+		uv tool install "$tool"
+	done
 }
 
 # Installs nvm from AUR and sets up the latest Node.js version.
