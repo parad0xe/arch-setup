@@ -174,6 +174,20 @@ window#waybar.empty #window {
     color: #9a80c0;
 }
 
+/* ── Laptop keyboard toggle ──────────────── */
+#custom-laptop-kb.enabled {
+    color: #9d7acc;
+}
+
+#custom-laptop-kb.disabled,
+#custom-laptop-kb.unavailable {
+    color: #4a3a5e;
+}
+
+#custom-laptop-kb.disabled:hover {
+    color: #c890a0;
+}
+
 /* ── Tray ────────────────────────────────── */
 #tray {
     padding: 0 10px;

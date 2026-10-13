@@ -17,6 +17,8 @@ _install_cli_tools() {
 		"rofi-wayland"
 		"ffmpegthumbnailer"
 		"awww"
+		"brightnessctl"
+		"pavucontrol"
 		"starship"
 		"zsh-autosuggestions"
 		"zsh-syntax-highlighting"
@@ -33,6 +35,9 @@ _install_cli_tools() {
 
     log_info "Installing mpvpaper (video wallpapers)..."
     install_aur_pkg "mpvpaper"
+
+    log_info "Installing wlogout (power menu)..."
+    install_aur_pkg "wlogout"
 }
 
 # Installs Oh My Zsh framework for the Z shell.
