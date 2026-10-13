@@ -16,8 +16,13 @@ _enable_multilib() {
 
 # Updates the keyring first, then all system packages to their latest versions.
 _update_system() {
-    log_info "Updating archlinux-keyring..."
-    yes | sudo pacman -Sy --needed archlinux-keyring
+    local keyring="archlinux-keyring"
+    if is_arm; then
+        keyring="archlinuxarm-keyring"
+    fi
+
+    log_info "Updating $keyring..."
+    yes | sudo pacman -Sy --needed "$keyring"
 
     log_info "Updating system packages..."
     yes | sudo pacman -Su
@@ -68,7 +73,10 @@ _install_yay() {
 
 # Entry point for the system module.
 setup() {
-	run_task "Enabling Multilib Repository..." _enable_multilib
+    # multilib (32-bit libraries) only exists for x86_64
+    if ! is_arm; then
+        run_task "Enabling Multilib Repository..." _enable_multilib
+    fi
     run_task "Updating System Packages..." _update_system
     run_task "Installing Core Packages..." _install_system_packages
     run_task "Installing AUR Helper (yay)..." _install_yay
