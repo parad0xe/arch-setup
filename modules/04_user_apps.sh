@@ -16,7 +16,7 @@ _install_cli_tools() {
 		"libnotify"
 		"rofi-wayland"
 		"ffmpegthumbnailer"
-		"swww"
+		"awww"
 		"starship"
 		"zsh-autosuggestions"
 		"zsh-syntax-highlighting"
@@ -30,6 +30,9 @@ _install_cli_tools() {
 
     log_info "Installing Ghostty terminal..."
     install_aur_pkg "ghostty"
+
+    log_info "Installing mpvpaper (video wallpapers)..."
+    install_aur_pkg "mpvpaper"
 }
 
 # Installs Oh My Zsh framework for the Z shell.
