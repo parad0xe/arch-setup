@@ -70,6 +70,7 @@ _install_user_apps() {
         "gvfs"
         "file-roller"
 		"keepass"
+		"network-manager-applet"
     )
 
     for pkg in "${fm_pkgs[@]}"; do
