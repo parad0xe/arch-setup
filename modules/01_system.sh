@@ -14,10 +14,13 @@ _enable_multilib() {
     fi
 }
 
-# Updates all system packages to their latest versions.
+# Updates the keyring first, then all system packages to their latest versions.
 _update_system() {
+    log_info "Updating archlinux-keyring..."
+    yes | sudo pacman -Sy --needed archlinux-keyring
+
     log_info "Updating system packages..."
-    yes | sudo pacman -Syu
+    yes | sudo pacman -Su
 }
 
 # Installs essential base system packages and utilities.
