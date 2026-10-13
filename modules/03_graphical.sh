@@ -24,10 +24,13 @@ _install_wayland_stack() {
     done
 }
 
-# Installs the hyprlock screen locker.
-_install_hyprlock() {
+# Installs the hypr stack.
+_install_hypr_stack() {
     log_info "Installing hyprlock..."
     install_pkg "hyprlock"
+
+    log_info "Installing hyprmon..."
+	install_aur_pkg "hyprmon-bin"
 }
 
 # Installs the Bibata cursor theme used by the Hyprland config.
@@ -92,7 +95,7 @@ _enable_sddm() {
 # Entry point for the graphical module.
 setup() {
 	run_task "Installing Wayland Stack..." _install_wayland_stack
-    run_task "Installing Hyprlock..." _install_hyprlock
+    run_task "Installing Hypr Stack..." _install_hypr_stack
     run_task "Installing Cursor Theme..." _install_cursor_theme
     run_task "Installing Icon Theme..." _setup_icon_theme
     run_task "Installing SDDM Theme..." _setup_sddm_theme

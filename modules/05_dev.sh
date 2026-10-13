@@ -75,11 +75,14 @@ _setup_tui_ide() {
 
     log_info "Running PlugInstall for Neovim..."
     nvim +PlugInstall +qall > /dev/null 2>&1
+
+    log_info "Installing yazi..."
+	install_pkg "yazi"
 }
 
 # Entry point for the development tools module.
 setup() {
-	run_task "Installing Neovim Environment..." _setup_tui_ide
+	run_task "Installing Terminal Environment..." _setup_tui_ide
 	run_task "Installing Python Environment..." _setup_python
     run_task "Installing Node.js Environment..." _setup_node
     run_task "Installing Rust Environment..." _setup_rust

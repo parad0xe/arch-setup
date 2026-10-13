@@ -17,6 +17,9 @@ alias tree="tree -a --dirsfirst -I .git/"
 alias cdmk="cd $(mktemp -d)"
 alias vim="nvim"
 alias py="python3"
+# hyprmon saves the monitor layout here instead of in the dotfiles
+# (loaded by .config/hypr/conf/monitors.lua)
+alias hyprmon='HYPRLAND_CONFIG="$HOME/.config/hyprmon/hyprland.lua" hyprmon'
 
 export PATH="/usr/local/go/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
