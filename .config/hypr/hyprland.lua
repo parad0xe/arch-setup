@@ -1,5 +1,5 @@
 require("conf.monitors")
-require("conf.env")
+-- require("conf.env")
 require("conf.input")
 require("conf.layerrules")
 require("conf.visuals")
