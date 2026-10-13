@@ -1,10 +1,10 @@
 require("conf.monitors")
--- require("conf.env")
 require("conf.input")
+require("conf.keyboard.selected")
 require("conf.layerrules")
 require("conf.visuals")
 require("conf.autostart")
-require("conf.keybinds")
+require("conf.keybinds.selected")
 
 local function in_vm()
     local f = io.open("/proc/cpuinfo", "r")

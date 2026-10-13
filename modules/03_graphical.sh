@@ -30,6 +30,23 @@ _install_hyprlock() {
     install_pkg "hyprlock"
 }
 
+# Installs the Bibata cursor theme used by the Hyprland config.
+_install_cursor_theme() {
+    log_info "Installing Bibata cursor theme..."
+    install_aur_pkg "bibata-cursor-theme"
+}
+
+# Installs the Papirus icon theme and applies it to GTK apps. Rofi picks it
+# from .config/rofi/config.rasi.
+_setup_icon_theme() {
+    log_info "Installing Papirus icon theme..."
+    install_pkg "papirus-icon-theme"
+    install_pkg "gsettings-desktop-schemas"
+
+    log_info "Applying Papirus-Dark to GTK apps..."
+    gsettings set org.gnome.desktop.interface icon-theme "Papirus-Dark"
+}
+
 # Installs and applies the Tokyo Night theme for SDDM.
 _setup_sddm_theme() {
     log_info "Installing SDDM Tokyo Night theme..."
@@ -76,6 +93,8 @@ _enable_sddm() {
 setup() {
 	run_task "Installing Wayland Stack..." _install_wayland_stack
     run_task "Installing Hyprlock..." _install_hyprlock
+    run_task "Installing Cursor Theme..." _install_cursor_theme
+    run_task "Installing Icon Theme..." _setup_icon_theme
     run_task "Installing SDDM Theme..." _setup_sddm_theme
     run_task "Configuring SDDM Visuals..." _customize_sddm "$CFG_LOCK_BG_IMG"
     run_task "Enabling SDDM Service..." _enable_sddm

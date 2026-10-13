@@ -2,3 +2,7 @@
 
 user_configuration.json
 user_credentials.json
+
+# Variant links created by modules/21_choices.sh
+selected
+selected.*

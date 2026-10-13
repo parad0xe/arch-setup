@@ -8,7 +8,7 @@
     "spacing": 4,
     "modules-left": ["hyprland/workspaces", "hyprland/window"],
     "modules-center": ["clock"],
-    "modules-right": ["cpu", "pulseaudio", "backlight", "battery", "network", "bluetooth"],
+    "modules-right": ["cpu", "pulseaudio", "custom/brightness", "battery", "network", "bluetooth", "custom/laptop-kb", "custom/shutdown"],
 
     "hyprland/workspaces": {
         "disable-scroll": true,
@@ -55,11 +55,11 @@
         },
         "on-click": "pavucontrol"
     },
-    "backlight": {
-	"format": "{icon}  {percent}%",
-	"format-icons": ["󰃞", "󰃟", "󰃠"],
-	"on-scroll-up": "brightnessctl set +1%",
-        "on-scroll-down": "brightnessctl set 1%-"
+    "custom/brightness": {
+        "format": "󰃟",
+        "on-click": "~/.config/hypr/scripts/brightness-menu.sh",
+        "tooltip": true,
+        "tooltip-format": "Click to adjust monitor brightness"
     },
     "battery": {
         "interval": 5,
@@ -74,8 +74,9 @@
     },
     "network": {
         "format-wifi": "{essid} ({signalStrength}%) ",
-        "format-ethernet": "{ipaddr}/{cidr} ",
-        "format-disconnected": "Disconnected ⚠"
+        "format-ethernet": "{ipaddr}/{cidr} 󰈀",
+        "format-disconnected": "Disconnected ⚠",
+        "on-click": "~/.config/hypr/scripts/system/wifi.sh"
     },
     "bluetooth": {
         "format": " {status}",
@@ -85,5 +86,18 @@
     },
     "tray": {
         "spacing": 10
+    },
+    "custom/laptop-kb": {
+        "exec": "~/.config/hypr/scripts/toggle-laptop-kb.sh",
+        "return-type": "json",
+        "interval": 3600,
+        "signal": 8,
+        "on-click": "~/.config/hypr/scripts/toggle-laptop-kb.sh toggle",
+        "tooltip": true
+    },
+    "custom/shutdown": {
+        "format": " 󰐥 ",
+        "on-click": "wlogout",
+        "tooltip": false
     }
 }

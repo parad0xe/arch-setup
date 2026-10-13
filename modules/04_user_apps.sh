@@ -11,10 +11,14 @@ _install_cli_tools() {
 		"wl-clipboard"
 		"grim"
 		"slurp"
+		"satty"
+		"playerctl"
 		"libnotify"
 		"rofi-wayland"
 		"ffmpegthumbnailer"
-		"swww"
+		"awww"
+		"brightnessctl"
+		"pavucontrol"
 		"starship"
 		"zsh-autosuggestions"
 		"zsh-syntax-highlighting"
@@ -28,6 +32,12 @@ _install_cli_tools() {
 
     log_info "Installing Ghostty terminal..."
     install_aur_pkg "ghostty"
+
+    log_info "Installing mpvpaper (video wallpapers)..."
+    install_aur_pkg "mpvpaper"
+
+    log_info "Installing wlogout (power menu)..."
+    install_aur_pkg "wlogout"
 }
 
 # Installs Oh My Zsh framework for the Z shell.
@@ -60,6 +70,7 @@ _install_user_apps() {
         "gvfs"
         "file-roller"
 		"keepass"
+		"network-manager-applet"
     )
 
     for pkg in "${fm_pkgs[@]}"; do
