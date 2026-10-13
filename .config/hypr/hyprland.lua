@@ -1,10 +1,20 @@
+-- Loads the variant of a choice picked at setup (its selected.lua link, see
+-- modules/21_choices.sh), or its default variant when none was picked.
+local function require_choice(name)
+    if package.searchpath(name .. ".selected", package.path) then
+        require(name .. ".selected")
+    else
+        require(name .. ".default")
+    end
+end
+
 require("conf.monitors")
 require("conf.input")
-require("conf.keyboard.selected")
+require_choice("conf.keyboard")
 require("conf.layerrules")
 require("conf.visuals")
 require("conf.autostart")
-require("conf.keybinds.selected")
+require_choice("conf.keybinds")
 
 local function in_vm()
     local f = io.open("/proc/cpuinfo", "r")
