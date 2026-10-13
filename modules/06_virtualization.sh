@@ -31,8 +31,21 @@ _setup_libvirt() {
     fi
 }
 
+# Lets VMs reach libvirt's DHCP/DNS and the Internet when UFW is active.
+_setup_firewall() {
+    if ! command -v ufw > /dev/null 2>&1 || ! sudo ufw status | grep -q "Status: active"; then
+        log_info "UFW is not active, skipping firewall rules."
+        return 0
+    fi
+
+    log_info "Allowing VM traffic on virbr0 through UFW..."
+    sudo ufw allow in on virbr0
+    sudo ufw route allow in on virbr0
+}
+
 # Entry point for the virtualization module.
 setup() {
     run_task "Installing QEMU/KVM..." _install_qemu
     run_task "Configuring libvirt..." _setup_libvirt
+    run_task "Configuring firewall for VMs..." _setup_firewall
 }
