@@ -107,10 +107,8 @@ _setup_git() {
     git config --global init.defaultBranch main
 }
 
-# Sets the system timezone and enables NTP synchronization.
-#
-# Args:
-#   timezone: The timezone to set (e.g., Europe/Paris).
+# Asks for the system timezone (default: the current one) and enables NTP
+# synchronization.
 _setup_time() {
     local do_setup="y"
     printf "\r\033[K\033[1;34m[i]\033[0m Do you want to configure System Timezone? [Y/n]: " > /dev/tty
@@ -120,7 +118,21 @@ _setup_time() {
         return 0
     fi
 
-    local tz="$1"
+    local current
+    current=$(timedatectl show -p Timezone --value)
+
+    local tz=""
+    while true; do
+        printf "\r\033[K\033[1;34m[i]\033[0m Timezone [%s]: " "$current" > /dev/tty
+        read -r tz < /dev/tty
+        tz="${tz:-$current}"
+
+        if timedatectl list-timezones | grep -Fxq "$tz"; then
+            break
+        fi
+        log_warn "Unknown timezone: $tz"
+    done
+
     log_info "Configuring system time for $tz..."
     sudo timedatectl set-timezone "$tz"
     sudo timedatectl set-ntp true
@@ -155,6 +167,7 @@ _setup_dotfiles() {
     link_config "$repo/.config/zshrc" "$HOME/.zshrc"
     link_config "$repo/.config/vimrc" "$HOME/.vimrc"
     link_config "$repo/.config/ssh/config" "$HOME/.ssh/config"
+    mkdir -p -m 700 "$HOME/.ssh/config.d"
 
     local starship="$repo/.config/starship/nerd-font-symbols.toml"
     link_config "$starship" "$conf_dir/starship.toml"
@@ -171,6 +184,6 @@ setup() {
     _setup_ssh_key
 
     run_task "Configuring Git Settings..." _setup_git
-    run_task "Configuring System Timezone..." _setup_time "$CFG_TIMEZONE"
+    run_task "Configuring System Timezone..." _setup_time
     run_task "Deploying User Dotfiles..." _setup_dotfiles
 }

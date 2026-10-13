@@ -24,10 +24,7 @@ export SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export ASSETS_DIR="$SETUP_DIR/assets"
 
 # --- CONFIGURATION GLOBALE ---
-export CFG_TIMEZONE="Europe/Paris"
 export CFG_LOCK_BG_IMG="$SETUP_DIR/.assets/wallpapers/active/lock_active.jpg"
-export CFG_EMAIL="parad0xe@protonmail.com"
-export CFG_GIT_USER="parad0xe"
 
 # Prints the help message and exits.
 _show_help() {

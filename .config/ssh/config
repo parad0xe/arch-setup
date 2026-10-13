@@ -1,13 +1,8 @@
-Host my-server
-    HostName 192.0.2.10
-    User parad0xe
-    IdentityFile ~/.ssh/id_ed25519_sk
-    IdentitiesOnly yes
-    IdentityAgent none
+# Machine-specific hosts and keys live in ~/.ssh/config.d/ (not versioned).
+Include config.d/*
 
 Host *
     AddKeysToAgent yes
     IgnoreUnknown UseKeychain
-	IdentityFile ~/.ssh/id_ed25519_noV_sk
     IdentitiesOnly yes
     IdentityAgent none

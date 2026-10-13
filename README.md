@@ -19,18 +19,19 @@ the installation and configuration of a complete Arch Linux environment.
 
 ## Configuration
 
-Customize the following variables in `setup.sh` before launching:
+Nothing needs to be edited before launching: the setup asks for your
+personal settings (SSH key email, Git name and email, timezone) and lets you
+choose between config variants (e.g. keybindings, keyboard layout).
 
-* CFG\_TIMEZONE: Your system timezone (e.g., "Europe/Paris").
-* CFG\_EMAIL: Email address for Git and SSH key generation.
-* CFG\_GIT\_USER: Username for Git configuration.
+Machine-specific SSH settings (hosts, extra keys) go in `~/.ssh/config.d/`,
+which is included by the versioned SSH config but never versioned itself.
 
 ## Installation
 
 On a fresh Arch Linux installation, run the following command:
 
 ```bash
-git clone git@github.com:parad0xe/arch-setup.git ~/.dotfiles
+git clone https://github.com/parad0xe/arch-setup.git ~/.dotfiles
 cd ~/.dotfiles
 ./setup.sh
 ```
