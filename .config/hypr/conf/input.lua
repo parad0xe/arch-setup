@@ -3,12 +3,6 @@
 -- ==========================================
 hl.config({
     input = {
-        kb_layout  = "gb,us",
-        kb_variant = "",
-        kb_model   = "",
-        kb_options = "",
-        kb_rules   = "",
-
         follow_mouse = 1,
 
         natural_scroll = false,

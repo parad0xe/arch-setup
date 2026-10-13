@@ -1,6 +1,7 @@
 require("conf.monitors")
 -- require("conf.env")
 require("conf.input")
+require("conf.keyboard.selected")
 require("conf.layerrules")
 require("conf.visuals")
 require("conf.autostart")
