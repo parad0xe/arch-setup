@@ -62,19 +62,13 @@ _setup_sddm_theme() {
         sudo tee /etc/sddm.conf.d/theme.conf >/dev/null
 }
 
-# Customizes the SDDM theme with a specific background and colors.
-#
-# Args:
-#   img: Path to the background image.
+# Customizes the SDDM theme colors. Its background is background.jpg, written
+# by the wallpaper selector ("Apply to" login); until one is applied, SDDM
+# shows the background color.
 _customize_sddm() {
-    local img="$1"
-    local theme_dir="/usr/share/sddm/themes/tokyo-night-sddm"
-    local conf="$theme_dir/theme.conf"
+    local conf="/usr/share/sddm/themes/tokyo-night-sddm/theme.conf"
 
     log_info "Customizing SDDM theme visuals..."
-    sudo cp "$img" "$theme_dir/background.jpg"
-    sudo chmod 644 "$theme_dir/background.jpg"
-
     sudo sed -i 's|^Background=.*|Background="background.jpg"|' "$conf"
     sudo sed -i 's|^MainColor=.*|MainColor="#cdd6f4"|' "$conf"
     sudo sed -i 's|^AccentColor=.*|AccentColor="#89b4fa"|' "$conf"
@@ -99,6 +93,6 @@ setup() {
     run_task "Installing Cursor Theme..." _install_cursor_theme
     run_task "Installing Icon Theme..." _setup_icon_theme
     run_task "Installing SDDM Theme..." _setup_sddm_theme
-    run_task "Configuring SDDM Visuals..." _customize_sddm "$CFG_LOCK_BG_IMG"
+    run_task "Configuring SDDM Visuals..." _customize_sddm
     run_task "Enabling SDDM Service..." _enable_sddm
 }

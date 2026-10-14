@@ -21,10 +21,10 @@ _on_error() {
 trap _on_error ERR
 
 export SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export ASSETS_DIR="$SETUP_DIR/assets"
 
 # --- CONFIGURATION GLOBALE ---
-export CFG_LOCK_BG_IMG="$SETUP_DIR/.assets/wallpapers/active/lock_active.jpg"
+# Default answer when the setup asks for the wallpapers repository
+export CFG_WALLPAPERS_REPO="https://github.com/kayzzel/wallpapers"
 
 # Prints the help message and exits.
 _show_help() {
