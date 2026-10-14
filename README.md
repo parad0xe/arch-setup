@@ -43,15 +43,29 @@ Each step of the setup is a block, declared by its module:
   that do not apply to the machine (NVIDIA without an NVIDIA GPU, x86_64-only
   apps on ARM, QEMU inside a VM...) are not offered.
 
-In the menu, `Tab` selects or unselects a block (`[x]` / `[ ]`) and `Enter`
-shows the summary: every block that will run, in run order, with why the
-ones not selected are there (always run, needed by another block). `Enter`
-installs them, `Esc` goes back to the selection.
+The menu shows the blocks by module. A module with an element named after
+it (`desktop`, `wallpapers`) shows that element with its components under
+it; the other modules (`app`, `dev`, `hardware`...) get a section line whose
+checkbox tells whether all (`[x]`), some (`[-]`) or none (`[ ]`) of their
+blocks are selected. Names are shown without the prefix of their section or
+element (`sddm` under `desktop`, `ghostty` under `app`).
 
-`./setup.sh --list` shows every block, its module and whether it is offered
-on the machine.
+`Tab` selects or unselects a block, or all the blocks of a section, and
+`Enter` shows the summary: every block that will run, in run order, with
+why the ones not selected are there (always run, needed by another block).
+`Enter` installs them, `Esc` goes back to the selection, and `s` saves the
+selection as a new profile: it asks for its name, its description and the
+variant of each config choice, then writes
+`~/.local/share/arch-setup/profiles/<name>.profile`, outside the repository,
+with the selected blocks (the required blocks and the ones they need come
+back on their own).
 
-A profile is a file in `profiles/`: its first comment line is the
+`./setup.sh --list` shows every block by module, whether it is offered on
+the machine, and the profiles.
+
+A profile is a file in `profiles/` (the repository's ones) or in
+`~/.local/share/arch-setup/profiles/` (your own ones, which take precedence
+over a repository profile of the same name): its first comment line is the
 description shown in the menu, `block` lines select the matching blocks (shell
 patterns), and `choice` lines set a config variant instead of asking for it:
 
@@ -72,7 +86,8 @@ block neovim _setup_neovim "Neovim with its config and plugins" \
     --needs node
 ```
 
-The options of `block` are described in `modules/core.sh`.
+The options of `block` are described in `modules/core.sh`. A new module file
+starts with `module "<description>"`, its heading in the menu.
 
 ## Configuration
 
@@ -113,7 +128,9 @@ profile's ones selected, and shows what will run before installing it. The
 blocks they need are added, and every block runs after the ones it needs.
 
 Options:
-  -p, --profile <name>   Use this profile instead of asking for one
+  -p, --profile <name>   Use this profile instead of asking for one (from
+                         ~/.local/share/arch-setup/profiles, where the menu
+                         saves them, or else from profiles/)
   -b, --block <pattern>  Run only the matching blocks and the ones they need,
                          without the menus (e.g. neovim, "app.*"); can be
                          repeated
