@@ -6,8 +6,8 @@ hl.layer_rule({
 })
 
 hl.layer_rule({
-    name         = "wofi_blur",
-    match        = { namespace = "wofi" },
+    name         = "rofi_blur",
+    match        = { namespace = "rofi" },
     blur         = true,
     ignore_alpha = 0,
 })
