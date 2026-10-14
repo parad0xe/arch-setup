@@ -8,5 +8,7 @@ block git
 block timezone
 block wallpapers*
 
+config *
+
 choice .config/hypr/conf/keybinds default
 choice .config/hypr/conf/keyboard default
