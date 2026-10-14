@@ -66,20 +66,15 @@ _install_brave() {
     install_aur_pkg "brave-bin"
 }
 
-# Installs the Thunar file manager with archive support (thunar-archive-plugin,
-# file-roller) and gvfs (trash, removable drives, network shares).
-_install_thunar() {
-    local pkgs=(
-        "thunar"
-        "thunar-archive-plugin"
-        "file-roller"
-        "gvfs"
-    )
+# Installs GNOME Files (Nautilus), the file manager, which handles archives
+# and gvfs (trash, removable drives, network shares) itself, and makes it the
+# default application for folders.
+_install_nautilus() {
+    log_info "Installing GNOME Files (Nautilus)..."
+    install_pkg "nautilus"
 
-    log_info "Installing Thunar..."
-    for pkg in "${pkgs[@]}"; do
-        install_pkg "$pkg"
-    done
+    log_info "Making Files the default application for folders..."
+    gio mime inode/directory org.gnome.Nautilus.desktop
 }
 
 # Installs the KeePass password manager.
@@ -119,7 +114,7 @@ block app.ghostty _install_ghostty "Ghostty terminal and its config" \
     --needs fonts
 
 block app.brave    _install_brave    "Brave web browser"
-block app.thunar   _install_thunar   "Thunar file manager with archive support"
+block app.nautilus _install_nautilus "GNOME Files (Nautilus) file manager"
 block app.keepass  _install_keepass  "KeePass password manager"
 block app.krita    _install_krita    "Krita painting program"
 
