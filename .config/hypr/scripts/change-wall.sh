@@ -141,8 +141,9 @@ _update_wallpaper() {
             ;;
         "login")
             local login_target="/usr/share/sddm/themes/tokyo-night-sddm/background.jpg"
-            pkexec cp "$process_src" "$login_target"
-            notify-send "Wallpaper" "Login screen background updated"
+            if pkexec cp "$process_src" "$login_target"; then
+                notify-send "Wallpaper" "Login screen background updated"
+            fi
             ;;
         "all")
             _update_wallpaper "$src" desktop all
