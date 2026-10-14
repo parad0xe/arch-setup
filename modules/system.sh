@@ -14,8 +14,13 @@ _enable_multilib() {
     fi
 }
 
-# Updates the keyring first, then all system packages to their latest versions.
+# Enables the multilib repository on x86_64 (it does not exist for ARM), then
+# updates the keyring and all system packages to their latest versions.
 _update_system() {
+    if ! is_arm; then
+        _enable_multilib
+    fi
+
     local keyring="archlinux-keyring"
     if is_arm; then
         keyring="archlinuxarm-keyring"
@@ -28,21 +33,21 @@ _update_system() {
     yes | sudo pacman -Su
 }
 
-# Installs essential base system packages and utilities.
+# Installs the base packages the other blocks rely on (build tools, git,
+# download tools, OpenSSL, OpenSSH for the SSH key and agent, compression
+# libraries) and a few everyday utilities.
 _install_system_packages() {
     local base_pkgs=(
         "base-devel"
-		"openssl"
-		"zlib"
-		"xz"
-		"tk"
         "git"
         "curl"
         "wget"
-        "vim"
+        "openssl"
+        "openssh"
+        "zlib"
+        "xz"
         "tree"
-		"zsh"
-		"ncdu"
+        "ncdu"
     )
 
     log_info "Installing base system packages..."
@@ -71,13 +76,11 @@ _install_yay() {
     rm -rf "$build_dir"
 }
 
-# Entry point for the system module.
-setup() {
-    # multilib (32-bit libraries) only exists for x86_64
-    if ! is_arm; then
-        run_task "Enabling Multilib Repository..." _enable_multilib
-    fi
-    run_task "Updating System Packages..." _update_system
-    run_task "Installing Core Packages..." _install_system_packages
-    run_task "Installing AUR Helper (yay)..." _install_yay
-}
+# Always run, before the other blocks: they all need an up-to-date system,
+# the base packages and yay. Each one needs the previous one, which orders
+# them.
+block system      _update_system           "multilib (x86_64), keyring and full system update" --required
+block system.base _install_system_packages "Base packages (base-devel, git, curl, wget, openssl, openssh, tree, ncdu)" --required \
+    --needs system
+block system.yay  _install_yay             "yay AUR helper" --required \
+    --needs system.base

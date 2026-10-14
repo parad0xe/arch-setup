@@ -2,7 +2,7 @@
 -- VISUALS & ANIMATIONS
 -- ==========================================
 
--- Cursor theme (installed by modules/03_graphical.sh)
+-- Cursor theme (installed by the desktop.cursor block, modules/desktop.sh)
 hl.env("XCURSOR_THEME", "Bibata-Modern-Classic")
 hl.env("XCURSOR_SIZE", "24")
 

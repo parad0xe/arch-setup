@@ -1,22 +1,12 @@
 #!/bin/bash
 
-# Asks for the git repository holding the wallpapers (CFG_WALLPAPERS_REPO by
-# default) and copies the formats the wallpaper selector shows into
-# ~/Pictures/wallpapers, keeping the repository's sub-folders.
-_deploy_wallpapers() {
-    local do_setup="y"
-    printf "\r\033[K\033[1;34m[i]\033[0m Do you want to deploy wallpapers? [Y/n]: " > /dev/tty
-    read -r do_setup < /dev/tty
-    if [[ "$do_setup" =~ ^[Nn]$ ]]; then
-        log_info "Skipping wallpapers deployment."
-        return 0
-    fi
-
-    local repo=""
-    printf "\r\033[K\033[1;34m[i]\033[0m Wallpapers repository [%s]: " "$CFG_WALLPAPERS_REPO" > /dev/tty
-    read -r repo < /dev/tty
-    repo="${repo:-$CFG_WALLPAPERS_REPO}"
-
+# Clones a wallpapers repository and copies the formats the wallpaper
+# selector shows into ~/Pictures/wallpapers, keeping its sub-folders.
+#
+# Args:
+#   repo: The git repository URL.
+_copy_wallpapers() {
+    local repo="$1"
     local clone_dir
     clone_dir=$(mktemp -d)
 
@@ -24,7 +14,7 @@ _deploy_wallpapers() {
     # Fails instead of asking for credentials (GitHub answers a mistyped
     # repository URL as if it were private)
     if ! GIT_TERMINAL_PROMPT=0 git clone --depth 1 "$repo" "$clone_dir"; then
-        log_warn "Could not clone $repo, run ./setup.sh -m wallpapers to retry."
+        log_warn "Could not clone $repo, run ./setup.sh -b wallpapers to retry."
         rm -rf "$clone_dir"
         return 0
     fi
@@ -41,6 +31,18 @@ _deploy_wallpapers() {
     )
 
     rm -rf "$clone_dir"
+}
+
+# Asks for the git repository holding the wallpapers (CFG_WALLPAPERS_REPO by
+# default), then copies the formats the wallpaper selector shows into
+# ~/Pictures/wallpapers, keeping the repository's sub-folders.
+_deploy_wallpapers() {
+    local repo=""
+    printf "\r\033[K\033[1;34m[i]\033[0m Wallpapers repository [%s]: " "$CFG_WALLPAPERS_REPO" > /dev/tty
+    read -r repo < /dev/tty
+    repo="${repo:-$CFG_WALLPAPERS_REPO}"
+
+    run_task "Copying wallpapers from $repo" _copy_wallpapers "$repo"
 }
 
 # Installs fzf and chafa, which shows the images in the terminal.
@@ -92,14 +94,6 @@ _choose_default_wallpapers() {
 
     if [ -z "$(find "$wall_dir" -path "$wall_dir/.*" -prune -o -type f -print -quit 2>/dev/null)" ]; then
         log_info "No wallpaper in ${wall_dir/#$HOME/\~}, skipping default wallpapers."
-        return 0
-    fi
-
-    local do_setup="y"
-    printf "\r\033[K\033[1;34m[i]\033[0m Do you want to choose the default wallpapers? [Y/n]: " > /dev/tty
-    read -r do_setup < /dev/tty
-    if [[ "$do_setup" =~ ^[Nn]$ ]]; then
-        log_info "Skipping default wallpapers."
         return 0
     fi
 
@@ -155,8 +149,12 @@ _choose_default_wallpapers() {
     fi
 }
 
-# Entry point for the wallpapers module.
-setup() {
-    run_task "Deploying Wallpapers..." _deploy_wallpapers
-    _choose_default_wallpapers
-}
+block wallpapers _deploy_wallpapers "Wallpapers copied from a git repository" --interactive
+
+# Picks among the wallpapers copied above, applies the desktop one with the
+# wallpaper engines when the setup runs in Hyprland, and writes the login one
+# into the SDDM theme when it is installed
+block wallpapers.defaults _choose_default_wallpapers "Default desktop, lock and login wallpapers" --interactive \
+    --after wallpapers \
+    --after desktop.wallpaper-engines \
+    --after desktop.sddm

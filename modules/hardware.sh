@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Installs and enables the NetworkManager service.
+# Installs NetworkManager (nmcli) and enables the service.
 _setup_network() {
     log_info "Installing NetworkManager..."
     install_pkg "networkmanager"
@@ -25,12 +25,11 @@ _setup_audio() {
     done
 }
 
-# Installs Bluetooth utilities and enables the service.
+# Installs the Bluetooth stack (bluez, bluetoothctl) and enables the service.
 _setup_bluetooth() {
     local pkgs=(
         "bluez"
         "bluez-utils"
-        "blueman"
     )
 
     log_info "Installing Bluetooth packages..."
@@ -47,13 +46,14 @@ _has_nvidia_gpu() {
     grep -qsx "0x10de" /sys/bus/pci/devices/*/vendor
 }
 
-# Installs NVIDIA drivers and configures early module loading.
+# Installs the NVIDIA drivers (nvidia-open-dkms, nvidia-prime for prime-run),
+# loads them early (mkinitcpio) and enables DRM modeset in GRUB.
 _setup_nvidia() {
     log_info "Cleaning up conflicting NVIDIA packages..."
-	local conflict_pkgs=("nvidia" "nvidia-open")
-  	for pkg in "${conflict_pkgs[@]}"; do
-    	sudo pacman -R --noconfirm "$pkg" 2>/dev/null || true
-  	done
+    local conflict_pkgs=("nvidia" "nvidia-open")
+    for pkg in "${conflict_pkgs[@]}"; do
+        sudo pacman -R --noconfirm "$pkg" 2>/dev/null || true
+    done
 
     local pkgs=(
         "linux-headers"
@@ -75,6 +75,8 @@ _setup_nvidia() {
     local mods="nvidia nvidia_modeset nvidia_uvm nvidia_drm"
     sudo sed -i "s/MODULES=()/MODULES=($mods)/" "$mkinit"
     sudo mkinitcpio -P
+
+    _setup_grub_nvidia
 }
 
 # Configures GRUB with NVIDIA DRM modeset for Wayland support.
@@ -94,8 +96,10 @@ _setup_grub_nvidia() {
     fi
 }
 
+# Installs the smartcard stack used by security keys such as a YubiKey
+# (pcsclite, ccid) and enables pcscd.
 _setup_securitykey() {
-	log_info "Installing Smartcard packages..."
+    log_info "Installing Smartcard packages..."
     install_pkg "pcsclite"
     install_pkg "ccid"
 
@@ -103,24 +107,8 @@ _setup_securitykey() {
     sudo systemctl enable --now pcscd.service
 }
 
-# Installs ddcutil to set external monitor brightness over DDC/CI. The
-# package loads i2c-dev at boot and grants the logged-in user access to
-# the monitors' i2c buses.
-_setup_monitor_control() {
-    log_info "Installing ddcutil..."
-    install_pkg "ddcutil"
-}
-
-setup() {
-	run_task "Installing Networking Tools..." _setup_network
-    run_task "Installing Audio Stack..." _setup_audio
-    run_task "Installing Bluetooth Tools..." _setup_bluetooth
-    if _has_nvidia_gpu; then
-        run_task "Installing NVIDIA Drivers..." _setup_nvidia
-        run_task "Configuring GRUB for NVIDIA..." _setup_grub_nvidia
-    else
-        log_info "No NVIDIA GPU detected, skipping NVIDIA drivers."
-    fi
-	run_task "Configuring Smartcard Services..." _setup_securitykey
-    run_task "Installing Monitor Control Tools..." _setup_monitor_control
-}
+block network     _setup_network     "NetworkManager"
+block audio       _setup_audio       "PipeWire audio stack"
+block bluetooth   _setup_bluetooth   "Bluetooth stack (bluez)"
+block nvidia      _setup_nvidia      "NVIDIA drivers, early loading, GRUB DRM modeset" --if _has_nvidia_gpu
+block securitykey _setup_securitykey "Smartcard stack for security keys (pcscd)"
