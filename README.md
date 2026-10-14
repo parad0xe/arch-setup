@@ -5,8 +5,9 @@ the installation and configuration of a complete Arch Linux environment.
 
 ## Features
 
-* Blocks and Profiles: Pick a profile, then tick the blocks to install in
-  a menu; the blocks they need are added and run in dependency order.
+* Blocks and Profiles: Pick a profile, then select the blocks to install in
+  a menu and check the summary of what will run; the blocks they need are
+  added and run in dependency order.
 * NVIDIA Optimized: Automatic driver installation and DRM configuration
   when an NVIDIA GPU is detected.
 * ARM Support: Runs on Arch Linux ARM (aarch64, e.g. Asahi Linux on Apple
@@ -42,11 +43,16 @@ Each step of the setup is a block, declared by its module:
   that do not apply to the machine (NVIDIA without an NVIDIA GPU, x86_64-only
   apps on ARM, QEMU inside a VM...) are not offered.
 
+In the menu, `Tab` selects or unselects a block (`[x]` / `[ ]`) and `Enter`
+shows the summary: every block that will run, in run order, with why the
+ones not selected are there (always run, needed by another block). `Enter`
+installs them, `Esc` goes back to the selection.
+
 `./setup.sh --list` shows every block, its module and whether it is offered
 on the machine.
 
 A profile is a file in `profiles/`: its first comment line is the
-description shown in the menu, `block` lines tick the matching blocks (shell
+description shown in the menu, `block` lines select the matching blocks (shell
 patterns), and `choice` lines set a config variant instead of asking for it:
 
 ```txt
@@ -103,8 +109,8 @@ cd ~/.dotfiles
 Usage: ./setup.sh [options]
 
 Without -b or -m, asks for a profile, then for the blocks to run with the
-profile's ones ticked. The blocks they need are added, and every block runs
-after the ones it needs.
+profile's ones selected, and shows what will run before installing it. The
+blocks they need are added, and every block runs after the ones it needs.
 
 Options:
   -p, --profile <name>   Use this profile instead of asking for one
