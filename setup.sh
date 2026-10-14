@@ -30,17 +30,21 @@ USER_PROFILES_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/arch-setup/profiles"
 # Default answer when the setup asks for the wallpapers repository
 export CFG_WALLPAPERS_REPO="https://github.com/kayzzel/wallpapers"
 
-# Block patterns of the chosen profile (its variants go in PROFILE_CHOICES)
+# Block and config patterns of the chosen profile (its variants go in
+# CHOSEN_VARIANTS)
 PROFILE_BLOCKS=()
+PROFILE_CONFIGS=()
 
 # Prints the help message and exits.
 _show_help() {
     cat <<'EOF'
 Usage: ./setup.sh [options]
 
-Without -b or -m, asks for a profile, then for the blocks to run with the
-profile's ones selected, and shows what will run before installing it. The
-blocks they need are added, and every block runs after the ones it needs.
+Without -b, -m or -c, asks for a profile, then for the blocks to run and the
+configs to deploy (the profile's ones selected), and shows what will run
+before installing it. The blocks and configs they need are added, every
+block runs after the ones it needs, and the configs are deployed after the
+blocks.
 
 Options:
   -p, --profile <name>   Use this profile instead of asking for one (from
@@ -51,20 +55,24 @@ Options:
                          repeated
   -m, --module <name>    Same for the blocks of modules/<name>.sh; can be
                          repeated
+  -c, --config <pattern> Deploy the matching configs, with the blocks and
+                         configs they need, without the menus (e.g. hypr);
+                         can be repeated
   -r, --resume <block>   Skip the blocks that run before this one
-  -l, --list             List the blocks and the profiles
+  -l, --list             List the blocks, the configs and the profiles
   -h, --help             Show this help message
 
 Examples:
   ./setup.sh -p desktop
   ./setup.sh -m wallpapers
   ./setup.sh -b neovim -b "app.*"
+  ./setup.sh -c hypr -c waybar
   ./setup.sh -p full --resume shell
 EOF
     exit 0
 }
 
-# Sources the core, then every module, which declares its blocks.
+# Sources the core, then every module, which declares its blocks and configs.
 _load_modules() {
     source "$SETUP_DIR/modules/core.sh"
 
@@ -76,9 +84,10 @@ _load_modules() {
     done
 }
 
-# Stops when a block needs or follows a block that does not exist (a typo in
-# a module).
-_check_blocks() {
+# Stops on a mistake in the declarations of a module: a block or config
+# referring to one that does not exist, a config without its --block, its
+# file or its --then function.
+_check_declarations() {
     local id other
     for id in "${BLOCK_IDS[@]}"; do
         for other in ${BLOCK_NEEDS[$id]} ${BLOCK_AFTER[$id]}; do
@@ -87,6 +96,33 @@ _check_blocks() {
                 exit 1
             fi
         done
+    done
+
+    for id in "${CONFIG_IDS[@]}"; do
+        if [ -z "${CONFIG_BLOCK[$id]}" ]; then
+            log_error "Config $id has no --block"
+            exit 1
+        fi
+        for other in ${CONFIG_BLOCK[$id]} ${CONFIG_NEEDS[$id]}; do
+            if [ -z "${BLOCK_FUNCTION[$other]}" ]; then
+                log_error "Config $id refers to an unknown block: $other"
+                exit 1
+            fi
+        done
+        for other in ${CONFIG_NEEDS_CONFIG[$id]}; do
+            if [ -z "${CONFIG_SOURCE[$other]}" ]; then
+                log_error "Config $id refers to an unknown config: $other"
+                exit 1
+            fi
+        done
+        if [ ! -e "$SETUP_DIR/${CONFIG_SOURCE[$id]}" ]; then
+            log_error "Config $id: ${CONFIG_SOURCE[$id]} does not exist"
+            exit 1
+        fi
+        if [ -n "${CONFIG_THEN[$id]}" ] && ! declare -F "${CONFIG_THEN[$id]}" > /dev/null; then
+            log_error "Config $id: unknown --then function ${CONFIG_THEN[$id]}"
+            exit 1
+        fi
     done
 }
 
@@ -97,6 +133,22 @@ _check_blocks() {
 _matching_blocks() {
     local id pattern
     for id in "${BLOCK_IDS[@]}"; do
+        for pattern in "$@"; do
+            if [[ "$id" == $pattern ]]; then
+                echo "$id"
+                break
+            fi
+        done
+    done
+}
+
+# Prints the ids of the configs matching shell patterns (e.g. "*").
+#
+# Args:
+#   ...: The patterns.
+_matching_configs() {
+    local id pattern
+    for id in "${CONFIG_IDS[@]}"; do
         for pattern in "$@"; do
             if [[ "$id" == $pattern ]]; then
                 echo "$id"
@@ -161,9 +213,9 @@ _profile_description() {
     printf '\n'
 }
 
-# Reads a profile: its block patterns into PROFILE_BLOCKS and its variants
-# into PROFILE_CHOICES. Warns about the patterns matching no block and the
-# variants of folders that are not choices.
+# Reads a profile: its block and config patterns into PROFILE_BLOCKS and
+# PROFILE_CONFIGS, and its variants into CHOSEN_VARIANTS. Warns about the
+# patterns matching nothing and the variants that do not exist.
 #
 # Args:
 #   name: The profile name.
@@ -185,10 +237,19 @@ _load_profile() {
                     log_warn "$name.profile: no block matches $arg"
                 fi
                 ;;
+            config)
+                PROFILE_CONFIGS+=("$arg")
+                if [ -z "$(_matching_configs "$arg")" ]; then
+                    log_warn "$name.profile: no config matches $arg"
+                fi
+                ;;
             choice)
-                PROFILE_CHOICES[$arg]="$value"
                 if [ ! -f "$SETUP_DIR/$arg/.choice" ]; then
                     log_warn "$name.profile: $arg is not a choice folder"
+                elif ! choice_variants "$arg" | grep -qxF "$value"; then
+                    log_warn "$name.profile: $arg has no variant $value"
+                else
+                    CHOSEN_VARIANTS[$arg]="$value"
                 fi
                 ;;
             *) log_warn "$name.profile: unknown line: $keyword $arg $value" ;;
@@ -203,6 +264,20 @@ _load_profile() {
 _in_profile() {
     local pattern
     for pattern in "${PROFILE_BLOCKS[@]}"; do
+        if [[ "$1" == $pattern ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Returns success when the profile selects a config.
+#
+# Args:
+#   id: The config id.
+_in_profile_configs() {
+    local pattern
+    for pattern in "${PROFILE_CONFIGS[@]}"; do
         if [[ "$1" == $pattern ]]; then
             return 0
         fi
@@ -286,6 +361,52 @@ _block_preview() {
     fi
 }
 
+# Prints the menu preview of a config: where it is linked, the block of its
+# program, what it needs and what it runs once linked.
+#
+# Args:
+#   id: The config id.
+_config_preview() {
+    local id="$1"
+    printf '%s → ~/%s\n%s\n\n' "$id" "${CONFIG_TARGET[$id]}" "${CONFIG_DESCRIPTION[$id]}"
+    printf 'Links %s from the repository; an existing config\nis kept as .bak.\n' "${CONFIG_SOURCE[$id]}"
+    printf '\nOffered when this block runs: %s\n' "${CONFIG_BLOCK[$id]}"
+    if [ -n "${CONFIG_NEEDS[$id]}" ]; then
+        printf '\nNeeds the blocks (added automatically): %s\n' "${CONFIG_NEEDS[$id]% }"
+    fi
+    if [ -n "${CONFIG_NEEDS_CONFIG[$id]}" ]; then
+        printf '\nNeeds the configs (added automatically): %s\n' "${CONFIG_NEEDS_CONFIG[$id]% }"
+    fi
+    if [ -n "${CONFIG_THEN[$id]}" ]; then
+        printf '\nOnce linked:\n%s\n' "$(function_doc "${CONFIG_THEN[$id]}")"
+    fi
+}
+
+# Prints the menu preview of a config variant: what it changes and its
+# values.
+#
+# Args:
+#   folder: The choice folder, relative to the repository.
+_variant_preview() {
+    printf '%s\n%s\n\n' "${1##*/}" "$(head -n 1 "$SETUP_DIR/$1/.choice")"
+    printf 'Variants (←/→ to change):\n'
+    choice_variants "$1" | sed 's/^/  /'
+    printf '\nFiles: %s/\n' "$1"
+}
+
+# Prints the variants a config will use, e.g. "keybinds: vim, keyboard:
+# default".
+#
+# Args:
+#   id: The config id.
+_config_variants_text() {
+    local folder text=""
+    while IFS= read -r folder; do
+        text+="${text:+, }${folder##*/}: $(choice_variant "$folder")"
+    done < <(config_choices "$1")
+    echo "$text"
+}
+
 # Installs fzf, which shows the menus, when it is missing.
 _ensure_fzf() {
     if ! command -v fzf > /dev/null; then
@@ -301,7 +422,7 @@ _choose_profile() {
 
     # One "name<TAB>shown line<TAB>file" line per profile
     {
-        printf 'none\t%-16s %s\t\n' "none" "Nothing selected, variants asked"
+        printf 'none\t%-16s %s\t\n' "none" "Nothing selected"
         for name in $(_profile_names); do
             printf '%s\t%-16s %s\t%s\n' "$name" "$name" \
                 "$(_profile_description "$name")" "$(_profile_file "$name")"
@@ -309,7 +430,7 @@ _choose_profile() {
     } | fzf --delimiter '\t' --with-nth 2 --layout reverse \
             --border rounded --border-label " Profile " --prompt "Profile > " \
             --header "Enter: choose  Esc: quit" \
-            --preview "cat {3} 2>/dev/null || echo 'Nothing selected, the variants are asked.'" \
+            --preview "cat {3} 2>/dev/null || echo 'Nothing selected.'" \
             --preview-window "right,55%,wrap" \
         | cut -f 1
 }
@@ -481,22 +602,178 @@ _choose_blocks() {
     return "$status"
 }
 
-# Shows the blocks that will run, in run order, with why the ones not
-# selected in the menu are there. Prints "install" (Enter) or "save" (s, to
-# save the selection as a profile); returns non-zero to go back to the
-# selection (Esc).
+# Writes the scripts of the configs menu into its working folder: render
+# prints the configs with their checkbox and, under them, their variants
+# with their value; toggle selects or unselects a config; cycle changes a
+# variant; key runs Tab, left or right on the line under the cursor. fzf
+# runs them with the user's shell, so they are standalone sh scripts.
+#
+# Args:
+#   menu: The working folder of the menu (lines, selected, values,
+#       options/, previews/).
+_write_config_menu_scripts() {
+    local menu="$1"
+
+    cat > "$menu/render" <<'EOF'
+#!/bin/sh
+# Prints the menu lines: id, then the checkbox and name of a config, or the
+# name and value of a variant, under its config
+awk -F '\t' -v selected="$1/selected" -v values="$1/values" '
+    BEGIN {
+        while ((getline id < selected) > 0) checked[id] = 1
+        while ((getline line < values) > 0) {
+            split(line, field, "\t")
+            value[field[1]] = field[2]
+        }
+    }
+    $2 == "config" {
+        printf "%s\t%-30s %s\n", $1, (checked[$1] ? "[x] " : "[ ] ") $3, $4
+    }
+    $2 == "variant" {
+        printf "%s\t%-30s %-14s %s\n", $1, "      " $3, "< " value[$1] " >", $4
+    }
+' "$1/lines"
+EOF
+
+    cat > "$menu/toggle" <<'EOF'
+#!/bin/sh
+# Selects the config when it is not selected, unselects it otherwise
+if grep -qxF "$2" "$1/selected"; then
+    grep -vxF "$2" "$1/selected" > "$1/selected.new"
+    mv "$1/selected.new" "$1/selected"
+else
+    echo "$2" >> "$1/selected"
+fi
+EOF
+
+    cat > "$menu/cycle" <<'EOF'
+#!/bin/sh
+# Changes a variant to its next (1) or previous (-1) value
+awk -F '\t' -v id="$2" -v step="$3" -v options="$1/options/$2" '
+    BEGIN { while ((getline option < options) > 0) list[count++] = option }
+    $1 == id {
+        for (i = 0; i < count; i++) if (list[i] == $2) break
+        if (i == count) i = 0
+        print id "\t" list[(i + step + count) % count]
+        next
+    }
+    { print }
+' "$1/values" > "$1/values.new"
+mv "$1/values.new" "$1/values"
+EOF
+
+    cat > "$menu/key" <<'EOF'
+#!/bin/sh
+# Runs a key on the line under the cursor: on a config, Tab selects or
+# unselects it and moves down; on a variant, Tab and right show its next
+# value, left its previous one. Prints the fzf actions redrawing the list
+# (FZF_POS: current line, from 1).
+menu="$1"
+position=$FZF_POS
+case "$3" in
+    %*)
+        if [ "$2" = left ]; then
+            "$menu/cycle" "$menu" "$3" -1
+        else
+            "$menu/cycle" "$menu" "$3" 1
+        fi
+        ;;
+    *)
+        if [ "$2" = tab ]; then
+            "$menu/toggle" "$menu" "$3"
+            position=$((FZF_POS + 1))
+        fi
+        ;;
+esac
+echo "reload-sync('$menu/render' '$menu')+pos($position)"
+EOF
+
+    chmod +x "$menu/render" "$menu/toggle" "$menu/cycle" "$menu/key"
+}
+
+# Shows the configs menu: the given configs, with a checkbox each and their
+# variants under them. Prints "config <id>" for each selected config and
+# "choice <folder> <variant>" for each variant; returns non-zero to go back
+# (Esc).
+#
+# Args:
+#   offered: The name of an array of the config ids to show.
+#   selected: The name of an associative array (config id -> 1) of the
+#       configs selected when the menu opens.
+_choose_configs() {
+    local -n shown_configs="$1"
+    local -n initial_configs="$2"
+    local menu
+    menu=$(mktemp -d)
+    mkdir "$menu/previews" "$menu/options"
+    _write_config_menu_scripts "$menu"
+    : > "$menu/selected"
+    : > "$menu/lines"
+    : > "$menu/values"
+
+    # One "id<TAB>kind<TAB>name<TAB>description<TAB>folder" line per config
+    # and per variant (id %<n>), the variants under their config
+    local id folder variant index=0
+    for id in "${shown_configs[@]}"; do
+        printf '%s\tconfig\t%s\t%s\t\n' "$id" "$id" "${CONFIG_DESCRIPTION[$id]}" >> "$menu/lines"
+        _config_preview "$id" > "$menu/previews/$id"
+        if [ -n "${initial_configs[$id]}" ]; then
+            echo "$id" >> "$menu/selected"
+        fi
+
+        while IFS= read -r folder; do
+            index=$((index + 1))
+            variant="%$index"
+            printf '%s\tvariant\t%s\t%s\t%s\n' "$variant" "${folder##*/}" \
+                "$(head -n 1 "$SETUP_DIR/$folder/.choice")" "$folder" >> "$menu/lines"
+            choice_variants "$folder" > "$menu/options/$variant"
+            printf '%s\t%s\n' "$variant" "$(choice_variant "$folder")" >> "$menu/values"
+            _variant_preview "$folder" > "$menu/previews/$variant"
+        done < <(config_choices "$id")
+    done
+
+    local status=0
+    "$menu/render" "$menu" | fzf --no-input \
+            --delimiter '\t' --with-nth 2 --layout reverse \
+            --border rounded --border-label " Configs to deploy " \
+            --header "Tab: select/unselect  ←/→: change a variant  Enter: summary  Esc: back to the blocks" \
+            --preview "cat '$menu/previews/'{1}" --preview-window "right,45%,wrap" \
+            --bind "tab:transform('$menu/key' '$menu' tab {1})" \
+            --bind "right:transform('$menu/key' '$menu' right {1})" \
+            --bind "left:transform('$menu/key' '$menu' left {1})" \
+        > /dev/null || status=$?
+
+    if [ "$status" -eq 0 ]; then
+        sed 's/^/config /' "$menu/selected"
+        awk -F '\t' 'NR == FNR { value[$1] = $2; next }
+            $2 == "variant" { print "choice " $5 " " value[$1] }' \
+            "$menu/values" "$menu/lines"
+    fi
+    rm -rf "$menu"
+    return "$status"
+}
+
+# Shows what will run, in run order: the blocks, then the configs deployed
+# after them, with why the ones not selected in the menus are there. Prints
+# "install" (Enter) or "save" (s, to save the selection as a profile);
+# returns non-zero to go back (Esc).
 #
 # Args:
 #   order: The name of the array of the ordered block ids.
 #   reasons: The name of an associative array (block id -> why it was added).
+#   configs: The name of the array of the config ids to deploy, in order.
+#   config_reasons: The name of an associative array (config id -> why it
+#       was added).
 _confirm_summary() {
     local -n summary_order="$1"
     local -n summary_reasons="$2"
+    local -n summary_configs="$3"
+    local -n summary_config_reasons="$4"
     local previews
     previews=$(mktemp -d)
 
     local dim=$'\e[2m' reset=$'\e[0m'
-    local lines=() index=0 id why
+    local lines=() index=0 id why variants
     for id in "${summary_order[@]}"; do
         index=$((index + 1))
         why=""
@@ -505,16 +782,30 @@ _confirm_summary() {
         elif [ -n "${summary_reasons[$id]}" ]; then
             why="${summary_reasons[$id]}"
         fi
-        lines+=("$(printf "%s\t%3d. %-26s $dim%-26s$reset %s" "$id" "$index" "$id" "$why" "${BLOCK_DESCRIPTION[$id]}")")
+        lines+=("$(printf "%s\t%3d. %-26s $dim%-28s$reset %s" "$id" "$index" "$id" "$why" "${BLOCK_DESCRIPTION[$id]}")")
         _block_preview "$id" > "$previews/$id"
     done
 
+    if [ "${#summary_configs[@]}" -gt 0 ]; then
+        lines+=("$(printf -- "-\t     $dim── Configs, deployed after the blocks ──$reset")")
+        echo "The configs are linked once all the blocks have run." > "$previews/-"
+        for id in "${summary_configs[@]}"; do
+            index=$((index + 1))
+            why="${summary_config_reasons[$id]}"
+            variants=$(_config_variants_text "$id")
+            lines+=("$(printf "config:%s\t%3d. %-26s $dim%-28s$reset → ~/%s%s" "$id" "$index" "$id" "$why" \
+                "${CONFIG_TARGET[$id]}" "${variants:+  ($variants)}")")
+            _config_preview "$id" > "$previews/config:$id"
+        done
+    fi
+
     # --expect prints the key that closed fzf first: empty for Enter, s
+    local label="$(_count "${#summary_order[@]}" block), $(_count "${#summary_configs[@]}" config)"
     local output status=0
     output=$(printf '%s\n' "${lines[@]}" | fzf --ansi --no-input \
             --delimiter '\t' --with-nth 2 --layout reverse \
-            --border rounded --border-label " Summary — $(_count "${#summary_order[@]}" block), in run order " \
-            --header "Enter: install  s: save as a profile  Esc: back to the selection  ?: show/hide details" \
+            --border rounded --border-label " Summary — $label, in run order " \
+            --header "Enter: install  s: save as a profile  Esc: back  ?: show/hide details" \
             --preview "cat '$previews'/{1}" --preview-window "right,45%,wrap,hidden" \
             --bind "?:toggle-preview" \
             --expect s) \
@@ -531,61 +822,23 @@ _confirm_summary() {
     fi
 }
 
-# Asks for the variant a new profile sets for each config choice: one of its
-# variants, or "ask" to ask for it during the setup. Fills the array with the
-# set ones.
-#
-# Args:
-#   variants: The name of an associative array receiving the variant of each
-#       choice folder (relative to the repository).
-_ask_profile_variants() {
-    local -n asked_variants="$1"
-    local marker dir folder description names file answer current
-    while IFS= read -r marker; do
-        dir=$(dirname "$marker")
-        folder="${dir#"$SETUP_DIR"/}"
-        description=$(head -n 1 "$marker")
-
-        names=()
-        for file in "$dir"/*; do
-            if [ -f "$file" ] && [ ! -L "$file" ]; then
-                file=$(basename "$file")
-                names+=("${file%.*}")
-            fi
-        done
-        current="${PROFILE_CHOICES[$folder]:-ask}"
-
-        while true; do
-            printf "\r\033[K\033[1;34m[i]\033[0m %s (%s or ask) [%s]: " \
-                "$description" "${names[*]}" "$current" > /dev/tty
-            read -r answer < /dev/tty
-            answer="${answer:-$current}"
-            if [ "$answer" = "ask" ] || [[ " ${names[*]} " == *" $answer "* ]]; then
-                break
-            fi
-            log_warn "Unknown variant: $answer"
-        done
-
-        if [ "$answer" != "ask" ]; then
-            asked_variants[$folder]="$answer"
-        fi
-    done < <(find "$SETUP_DIR" -name .choice -not -path "*/.git/*" | sort)
-}
-
-# Saves the blocks selected in the menu as a new local profile (in
-# USER_PROFILES_DIR, outside the repository), asking for its name,
-# description and variants, and uses its variants for this run. The
-# required blocks and the ones the selection needs are not written: they
-# come back on their own.
+# Saves the blocks and configs selected in the menus, with the variants of
+# the configs, as a new local profile (in USER_PROFILES_DIR, outside the
+# repository), asking for its name and description. The required blocks
+# and the blocks and configs the selection needs are not written: they come
+# back on their own.
 #
 # Args:
 #   selected: The name of an associative array (block id -> 1) of the blocks
 #       selected in the menu.
+#   selected_configs: The name of an associative array (config id -> 1) of
+#       the configs selected in the menu.
 #   profile: The name of the variable holding the current profile name, set
 #       to the new one.
 _save_profile() {
-    local -n saved_selection="$1"
-    local -n current_profile="$2"
+    local -n saved_blocks="$1"
+    local -n saved_configs="$2"
+    local -n current_profile="$3"
 
     local name="" question answer
     while true; do
@@ -621,34 +874,55 @@ _save_profile() {
     printf "\r\033[K\033[1;34m[i]\033[0m Description (shown in the profile menu): " > /dev/tty
     read -r description < /dev/tty
 
-    local -A variants=()
-    _ask_profile_variants variants
-
     local file="$USER_PROFILES_DIR/$name.profile" id folder
     mkdir -p "$USER_PROFILES_DIR"
     {
         echo "# ${description:-$name}"
         for id in "${BLOCK_IDS[@]}"; do
-            if [ -n "${saved_selection[$id]}" ]; then
+            if [ -n "${saved_blocks[$id]}" ]; then
                 echo "block $id"
             fi
         done
-        if [ "${#variants[@]}" -gt 0 ]; then
-            echo
-            for folder in $(printf '%s\n' "${!variants[@]}" | sort); do
-                echo "choice $folder ${variants[$folder]}"
-            done
-        fi
+
+        echo
+        for id in "${CONFIG_IDS[@]}"; do
+            if [ -n "${saved_configs[$id]}" ]; then
+                echo "config $id"
+            fi
+        done
+
+        for id in "${CONFIG_IDS[@]}"; do
+            if [ -n "${saved_configs[$id]}" ]; then
+                while IFS= read -r folder; do
+                    echo "choice $folder $(choice_variant "$folder")"
+                done < <(config_choices "$id")
+            fi
+        done
     } > "$file"
 
-    # This run uses the new profile's variants
-    PROFILE_CHOICES=()
-    for folder in "${!variants[@]}"; do
-        PROFILE_CHOICES[$folder]="${variants[$folder]}"
-    done
     current_profile="$name"
-
     log_success "Profile saved: ${file/#$HOME/\~}"
+}
+
+# Fills a block selection with the blocks selected in the menu and the
+# required ones.
+#
+# Args:
+#   selected: The name of an associative array (block id -> 1) of the blocks
+#       selected in the menu.
+#   selection: The name of the associative array to fill.
+_base_selection() {
+    local -n menu_blocks="$1"
+    local -n base_blocks="$2"
+    local id
+    for id in "${!menu_blocks[@]}"; do
+        base_blocks[$id]=1
+    done
+    for id in "${BLOCK_IDS[@]}"; do
+        if [ -n "${BLOCK_REQUIRED[$id]}" ] && block_available "$id"; then
+            base_blocks[$id]=1
+        fi
+    done
 }
 
 # Adds to the selection the blocks the selected ones need, recursively, when
@@ -764,8 +1038,77 @@ _plan() {
     fi
 }
 
+# Prints the configs offered for a block selection: the ones whose
+# program's block will run, in declaration order.
+#
+# Args:
+#   selection: The name of an associative array (block id -> 1).
+_offered_configs() {
+    local -n planned_blocks="$1"
+    local id
+    for id in "${CONFIG_IDS[@]}"; do
+        if [ -n "${planned_blocks[${CONFIG_BLOCK[$id]}]}" ]; then
+            echo "$id"
+        fi
+    done
+}
+
+# Completes a config selection with the configs they need, recursively, and
+# adds to the block selection the blocks the configs need (their program's
+# block and their --needs), recording why each one was added.
+#
+# Args:
+#   configs: The name of an associative array (config id -> 1).
+#   config_reasons: The name of an associative array receiving "needed by
+#       config <id>" for each added config.
+#   selection: The name of an associative array (block id -> 1).
+#   reasons: The name of an associative array receiving why each block was
+#       added.
+_add_config_needs() {
+    local -n wanted_configs="$1"
+    local -n added_config_reasons="$2"
+    local -n config_blocks="$3"
+    local -n config_block_reasons="$4"
+    local added=1 id need
+    while [ "$added" -eq 1 ]; do
+        added=0
+        for id in "${!wanted_configs[@]}"; do
+            for need in ${CONFIG_NEEDS_CONFIG[$id]}; do
+                if [ -z "${wanted_configs[$need]}" ]; then
+                    wanted_configs[$need]=1
+                    added_config_reasons[$need]="needed by config $id"
+                    added=1
+                fi
+            done
+        done
+    done
+
+    for id in "${!wanted_configs[@]}"; do
+        for need in ${CONFIG_BLOCK[$id]} ${CONFIG_NEEDS[$id]}; do
+            if [ -z "${config_blocks[$need]}" ] && block_available "$need"; then
+                config_blocks[$need]=1
+                config_block_reasons[$need]="needed by config $id"
+            fi
+        done
+    done
+}
+
+# Prints the configs of a selection, in declaration order.
+#
+# Args:
+#   configs: The name of an associative array (config id -> 1).
+_config_order() {
+    local -n chosen_configs="$1"
+    local id
+    for id in "${CONFIG_IDS[@]}"; do
+        if [ -n "${chosen_configs[$id]}" ]; then
+            echo "$id"
+        fi
+    done
+}
+
 # Prints the blocks by module, with how they are offered on this machine,
-# and the profiles.
+# the configs and the profiles.
 _list() {
     local -A module_of=()
     local modules=() module id label state name
@@ -800,6 +1143,12 @@ _list() {
         done
     done
 
+    printf '\nConfigs, deployed after the blocks (./setup.sh -c <pattern>):\n\n'
+    for id in "${CONFIG_IDS[@]}"; do
+        printf '  %-12s %-28s %s \033[2m(with %s)\033[0m\n' "$id" "~/${CONFIG_TARGET[$id]}" \
+            "${CONFIG_DESCRIPTION[$id]}" "${CONFIG_BLOCK[$id]}"
+    done
+
     printf '\nProfiles (./setup.sh -p <name>; local ones in %s):\n\n' "${USER_PROFILES_DIR/#$HOME/\~}"
     for name in $(_profile_names); do
         printf '  %-16s %s\n' "$name" "$(_profile_description "$name")"
@@ -813,13 +1162,14 @@ _list() {
 #   @: Command line arguments.
 main() {
     local profile="" resume="" list=false
-    local patterns=() modules=()
+    local patterns=() modules=() config_patterns=()
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
             -p|--profile) profile="$2"; shift 2 ;;
             -b|--block) patterns+=("$2"); shift 2 ;;
             -m|--module) modules+=("$2"); shift 2 ;;
+            -c|--config) config_patterns+=("$2"); shift 2 ;;
             -r|--resume) resume="$2"; shift 2 ;;
             -l|--list) list=true; shift ;;
             -h|--help) _show_help ;;
@@ -828,7 +1178,7 @@ main() {
     done
 
     _load_modules
-    _check_blocks
+    _check_declarations
 
     if [ "$list" = true ]; then
         _list
@@ -839,11 +1189,12 @@ main() {
         _load_profile "$profile"
     fi
 
-    local -A selection=() reasons=()
-    local order=() id
+    local -A selection=() reasons=() configs=() config_reasons=()
+    local order=() config_order=() id
 
-    if [ "${#patterns[@]}" -gt 0 ] || [ "${#modules[@]}" -gt 0 ]; then
-        # Direct mode: the given blocks, without the menus nor the required ones
+    if [ "${#patterns[@]}" -gt 0 ] || [ "${#modules[@]}" -gt 0 ] || [ "${#config_patterns[@]}" -gt 0 ]; then
+        # Direct mode: the given blocks and configs, without the menus nor
+        # the required blocks
         local pattern module
         for pattern in "${patterns[@]}"; do
             if [ -z "$(_matching_blocks "$pattern")" ]; then
@@ -855,6 +1206,11 @@ main() {
                 log_warn "No module named $module (see modules/)"
             fi
         done
+        for pattern in "${config_patterns[@]}"; do
+            if [ -z "$(_matching_configs "$pattern")" ]; then
+                log_warn "No config matches $pattern (see ./setup.sh --list)"
+            fi
+        done
 
         for id in $(_matching_blocks "${patterns[@]}") $(for module in "${modules[@]}"; do _module_blocks "$module"; done); do
             if block_available "$id"; then
@@ -863,12 +1219,23 @@ main() {
                 log_warn "Skipping $id: not for this machine"
             fi
         done
+        for id in $(_matching_configs "${config_patterns[@]}"); do
+            configs[$id]=1
+        done
 
+        _add_config_needs configs config_reasons selection reasons
         _plan selection reasons order "$resume"
+        mapfile -t config_order < <(_config_order configs)
+
         init_ui
         for id in "${order[@]}"; do
             if [ -n "${reasons[$id]}" ]; then
                 log_info "Adding $id (${reasons[$id]})"
+            fi
+        done
+        for id in "${config_order[@]}"; do
+            if [ -n "${config_reasons[$id]}" ]; then
+                log_info "Adding config $id (${config_reasons[$id]})"
             fi
         done
     else
@@ -885,63 +1252,127 @@ main() {
             fi
         fi
 
-        # Selected when the menu opens: the blocks of the profile, then the
-        # last selection when coming back from the summary
-        local -A selected=()
+        # Selected when the menus open: the blocks and configs of the
+        # profile, then the last selections when coming back
+        local -A selected=() selected_configs=()
         for id in "${BLOCK_IDS[@]}"; do
             if _offered "$id" && _in_profile "$id"; then
                 selected[$id]=1
             fi
         done
+        for id in "${CONFIG_IDS[@]}"; do
+            if _in_profile_configs "$id"; then
+                selected_configs[$id]=1
+            fi
+        done
 
+        # Blocks menu, then configs menu, then summary; Esc goes back a step
+        local step="blocks" configs_shown=false chosen output action
+        local offered=() keyword arg value
         while true; do
-            local chosen
-            if ! chosen=$(_choose_blocks "$profile" selected); then
-                log_info "Setup cancelled."
-                exit 0
-            fi
+            case "$step" in
+                blocks)
+                    if ! chosen=$(_choose_blocks "$profile" selected); then
+                        log_info "Setup cancelled."
+                        exit 0
+                    fi
+                    selected=()
+                    for id in $chosen; do
+                        selected[$id]=1
+                    done
+                    step="configs"
+                    ;;
 
-            selected=()
-            selection=()
-            reasons=()
-            order=()
-            for id in $chosen; do
-                selected[$id]=1
-                selection[$id]=1
-            done
-            for id in "${BLOCK_IDS[@]}"; do
-                if [ -n "${BLOCK_REQUIRED[$id]}" ] && block_available "$id"; then
-                    selection[$id]=1
-                fi
-            done
+                configs)
+                    # The configs offered are the ones of the blocks that will run
+                    selection=()
+                    reasons=()
+                    _base_selection selected selection
+                    _add_needed_blocks selection reasons
+                    mapfile -t offered < <(_offered_configs selection)
 
-            _plan selection reasons order "$resume"
+                    if [ "${#offered[@]}" -eq 0 ]; then
+                        configs_shown=false
+                        step="summary"
+                        continue
+                    fi
+                    configs_shown=true
 
-            # The summary shows again after saving a profile; Esc goes back
-            # to the selection
-            local action=""
-            while action=$(_confirm_summary order reasons) && [ "$action" = "save" ]; do
-                _save_profile selected profile
-            done
-            if [ "$action" = "install" ]; then
-                break
-            fi
+                    if ! output=$(_choose_configs offered selected_configs); then
+                        step="blocks"
+                        continue
+                    fi
+                    for id in "${offered[@]}"; do
+                        unset 'selected_configs[$id]'
+                    done
+                    while read -r keyword arg value; do
+                        case "$keyword" in
+                            config) selected_configs[$arg]=1 ;;
+                            choice) CHOSEN_VARIANTS[$arg]="$value" ;;
+                        esac
+                    done <<< "$output"
+                    step="summary"
+                    ;;
+
+                summary)
+                    selection=()
+                    reasons=()
+                    configs=()
+                    config_reasons=()
+                    order=()
+                    _base_selection selected selection
+                    _add_needed_blocks selection reasons
+                    mapfile -t offered < <(_offered_configs selection)
+                    for id in "${offered[@]}"; do
+                        if [ -n "${selected_configs[$id]}" ]; then
+                            configs[$id]=1
+                        fi
+                    done
+                    _add_config_needs configs config_reasons selection reasons
+                    _plan selection reasons order "$resume"
+                    mapfile -t config_order < <(_config_order configs)
+
+                    # The summary shows again after saving a profile
+                    action=""
+                    while action=$(_confirm_summary order reasons config_order config_reasons) \
+                            && [ "$action" = "save" ]; do
+                        _save_profile selected selected_configs profile
+                    done
+                    if [ "$action" = "install" ]; then
+                        break
+                    fi
+                    if [ "$configs_shown" = true ]; then
+                        step="configs"
+                    else
+                        step="blocks"
+                    fi
+                    ;;
+            esac
         done
 
         init_ui
     fi
 
-    if [ "${#order[@]}" -eq 0 ]; then
-        log_warn "No block to run."
+    if [ "${#order[@]}" -eq 0 ] && [ "${#config_order[@]}" -eq 0 ]; then
+        log_warn "Nothing to run."
         exit 0
     fi
 
-    log_info "Running $(_count "${#order[@]}" block): ${order[*]}"
-    printf "\n"
+    if [ "${#order[@]}" -gt 0 ]; then
+        log_info "Running $(_count "${#order[@]}" block): ${order[*]}"
+        printf "\n"
+        for id in "${order[@]}"; do
+            run_block "$id"
+        done
+    fi
 
-    for id in "${order[@]}"; do
-        run_block "$id"
-    done
+    if [ "${#config_order[@]}" -gt 0 ]; then
+        log_info "Deploying $(_count "${#config_order[@]}" config): ${config_order[*]}"
+        printf "\n"
+        for id in "${config_order[@]}"; do
+            run_config "$id"
+        done
+    fi
 
     sleep 0.5
     log_success "Setup completed successfully! Please reboot."
