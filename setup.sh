@@ -22,6 +22,9 @@ trap _on_error ERR
 
 export SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROFILES_DIR="$SETUP_DIR/profiles"
+# Profiles saved from the summary, outside the repository. They take
+# precedence over the repository's profiles of the same name.
+USER_PROFILES_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/arch-setup/profiles"
 
 # --- CONFIGURATION GLOBALE ---
 # Default answer when the setup asks for the wallpapers repository
@@ -40,7 +43,9 @@ profile's ones selected, and shows what will run before installing it. The
 blocks they need are added, and every block runs after the ones it needs.
 
 Options:
-  -p, --profile <name>   Use this profile instead of asking for one
+  -p, --profile <name>   Use this profile instead of asking for one (from
+                         ~/.local/share/arch-setup/profiles, where the menu
+                         saves them, or else from profiles/)
   -b, --block <pattern>  Run only the matching blocks and the ones they need,
                          without the menus (e.g. neovim, "app.*"); can be
                          repeated
@@ -114,16 +119,58 @@ _module_blocks() {
     done
 }
 
+# Prints the file of a profile: the local one (USER_PROFILES_DIR) when there
+# is one, the repository's one otherwise. Returns 1 when there is none.
+#
+# Args:
+#   name: The profile name.
+_profile_file() {
+    local dir
+    for dir in "$USER_PROFILES_DIR" "$PROFILES_DIR"; do
+        if [ -f "$dir/$1.profile" ]; then
+            echo "$dir/$1.profile"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Prints the names of the profiles, local and from the repository, once
+# each and sorted.
+_profile_names() {
+    local file
+    for file in "$USER_PROFILES_DIR"/*.profile "$PROFILES_DIR"/*.profile; do
+        if [ -f "$file" ]; then
+            basename "$file" .profile
+        fi
+    done | sort -u
+}
+
+# Prints the description of a profile (the first line of its file, without
+# its "#"), followed by "(local)" when it is a local one.
+#
+# Args:
+#   name: The profile name.
+_profile_description() {
+    local file
+    file=$(_profile_file "$1")
+    printf '%s' "$(sed -n '1s/^# *//p' "$file")"
+    if [ "$file" = "$USER_PROFILES_DIR/$1.profile" ]; then
+        printf ' (local)'
+    fi
+    printf '\n'
+}
+
 # Reads a profile: its block patterns into PROFILE_BLOCKS and its variants
 # into PROFILE_CHOICES. Warns about the patterns matching no block and the
 # variants of folders that are not choices.
 #
 # Args:
-#   name: The profile name (profiles/<name>.profile).
+#   name: The profile name.
 _load_profile() {
     local name="$1"
-    local file="$PROFILES_DIR/$name.profile"
-    if [ ! -f "$file" ]; then
+    local file
+    if ! file=$(_profile_file "$name"); then
         log_error "Unknown profile: $name (see ./setup.sh --list)"
         exit 1
     fi
@@ -174,6 +221,26 @@ _count() {
     else
         echo "$1 ${2}s"
     fi
+}
+
+# Fills the module of each block (modules/<module>.sh) and the list of the
+# modules, in load order.
+#
+# Args:
+#   module_of: The name of an associative array receiving block id -> module.
+#   modules: The name of an array receiving the module names.
+_index_modules() {
+    local -n indexed_module_of="$1"
+    local -n indexed_modules="$2"
+    local id module
+    for id in "${BLOCK_IDS[@]}"; do
+        module="${BLOCK_SOURCE[$id]##*/}"
+        module="${module%.sh}"
+        indexed_module_of[$id]="$module"
+        if [[ " ${indexed_modules[*]} " != *" $module "* ]]; then
+            indexed_modules+=("$module")
+        fi
+    done
 }
 
 # Returns success when a block is a component of a declared element.
@@ -230,53 +297,84 @@ _ensure_fzf() {
 # Asks which profile to start from and prints its name ("none" selects
 # nothing). Prints nothing when cancelled (Esc).
 _choose_profile() {
-    local file name
+    local name
+
+    # One "name<TAB>shown line<TAB>file" line per profile
     {
-        printf 'none\t%-12s %s\n' "none" "Nothing selected, variants asked"
-        for file in "$PROFILES_DIR"/*.profile; do
-            name=$(basename "$file" .profile)
-            printf '%s\t%-12s %s\n' "$name" "$name" "$(sed -n '1s/^# *//p' "$file")"
+        printf 'none\t%-16s %s\t\n' "none" "Nothing selected, variants asked"
+        for name in $(_profile_names); do
+            printf '%s\t%-16s %s\t%s\n' "$name" "$name" \
+                "$(_profile_description "$name")" "$(_profile_file "$name")"
         done
     } | fzf --delimiter '\t' --with-nth 2 --layout reverse \
             --border rounded --border-label " Profile " --prompt "Profile > " \
             --header "Enter: choose  Esc: quit" \
-            --preview "cat '$PROFILES_DIR'/{1}.profile 2>/dev/null || echo 'Nothing selected, the variants are asked.'" \
+            --preview "cat {3} 2>/dev/null || echo 'Nothing selected, the variants are asked.'" \
             --preview-window "right,55%,wrap" \
         | cut -f 1
 }
 
 # Writes the scripts of the blocks menu into its working folder: render
-# prints the menu lines with a checkbox per block, toggle selects or
-# unselects a block, and tab does both for the block under the cursor, then
-# moves the cursor to the next line. fzf runs them with the user's shell, so
-# they are standalone sh scripts.
+# prints the menu lines with their checkboxes, toggle selects or unselects a
+# block or a whole section, and tab does it for the line under the cursor,
+# then moves the cursor to the next line. fzf runs them with the user's
+# shell, so they are standalone sh scripts.
 #
 # Args:
-#   menu: The working folder of the menu (blocks, selected, previews/).
+#   menu: The working folder of the menu (lines, selected, previews/).
 _write_menu_scripts() {
     local menu="$1"
 
     cat > "$menu/render" <<'EOF'
 #!/bin/sh
-# Prints one line per block: its id, then its checkbox, id and description
+# Prints the menu lines: id, then checkbox, indented name and description. A
+# section's checkbox shows whether all ([x]), some ([-]) or none ([ ]) of
+# its blocks are selected.
 awk -F '\t' -v selected="$1/selected" '
     BEGIN { while ((getline id < selected) > 0) checked[id] = 1 }
-    {
-        box = checked[$1] ? "[x] " : "[ ] "
-        printf "%s\t%-36s %s\n", $1, $2 box $1, $3
+    NR == FNR {
+        if ($2 == "block" && $6 != "") {
+            total[$6]++
+            if (checked[$1]) chosen[$6]++
+        }
+        next
     }
-' "$1/blocks"
+    {
+        if ($2 == "section")
+            box = chosen[$1] == total[$1] ? "[x] " : (chosen[$1] ? "[-] " : "[ ] ")
+        else
+            box = checked[$1] ? "[x] " : "[ ] "
+        printf "%s\t%-30s %s\n", $1, $3 box $4, $5
+    }
+' "$1/lines" "$1/lines"
 EOF
 
     cat > "$menu/toggle" <<'EOF'
 #!/bin/sh
-# Selects the block when it is not selected, unselects it otherwise
-if grep -qx "$2" "$1/selected"; then
-    grep -vx "$2" "$1/selected" > "$1/selected.new"
-    mv "$1/selected.new" "$1/selected"
-else
-    echo "$2" >> "$1/selected"
-fi
+# Selects the block when it is not selected, unselects it otherwise. For a
+# section (@<module>), selects all its blocks, or unselects them all when
+# they all are.
+menu="$1"
+case "$2" in
+    @*)
+        awk -F '\t' -v section="$2" '$2 == "block" && $6 == section { print $1 }' \
+            "$menu/lines" > "$menu/section"
+        if grep -qvxF -f "$menu/selected" "$menu/section"; then
+            grep -vxF -f "$menu/selected" "$menu/section" >> "$menu/selected"
+        else
+            grep -vxF -f "$menu/section" "$menu/selected" > "$menu/selected.new"
+            mv "$menu/selected.new" "$menu/selected"
+        fi
+        ;;
+    *)
+        if grep -qxF "$2" "$menu/selected"; then
+            grep -vxF "$2" "$menu/selected" > "$menu/selected.new"
+            mv "$menu/selected.new" "$menu/selected"
+        else
+            echo "$2" >> "$menu/selected"
+        fi
+        ;;
+esac
 EOF
 
     cat > "$menu/tab" <<'EOF'
@@ -306,22 +404,62 @@ _choose_blocks() {
     mkdir "$menu/previews"
     _write_menu_scripts "$menu"
     : > "$menu/selected"
+    : > "$menu/lines"
 
-    # One "id<TAB>indent<TAB>description" line per offered block, components
-    # indented under their element
-    local id indent
+    local -A module_of=() offered=()
+    local modules=() id
+    _index_modules module_of modules
     for id in "${BLOCK_IDS[@]}"; do
-        if ! _offered "$id"; then
-            continue
+        if _offered "$id"; then
+            offered[$id]=1
         fi
-        indent=""
-        if _is_component "$id"; then
-            indent="    "
+    done
+
+    # One "id<TAB>kind<TAB>indent<TAB>name<TAB>description<TAB>section" line
+    # per section and offered block. A module with an element named after it
+    # shows that element as the head of its blocks; the other modules get a
+    # section line, which selects all their blocks.
+    local module section head indent name section_blocks
+    for module in "${modules[@]}"; do
+        section=""
+        head=""
+        section_blocks=""
+        if [ -z "${BLOCK_FUNCTION[$module]}" ]; then
+            section="@$module"
+            head="    "
         fi
-        printf '%s\t%s\t%s\n' "$id" "$indent" "${BLOCK_DESCRIPTION[$id]}" >> "$menu/blocks"
-        _block_preview "$id" > "$menu/previews/$id"
-        if [ -n "${initial_selection[$id]}" ]; then
-            echo "$id" >> "$menu/selected"
+
+        for id in "${BLOCK_IDS[@]}"; do
+            if [ "${module_of[$id]}" != "$module" ] || [ -z "${offered[$id]}" ]; then
+                continue
+            fi
+
+            # The section line goes before the first block of the module
+            if [ -n "$section" ] && [ -z "$section_blocks" ]; then
+                printf '%s\tsection\t\t%s\t%s\t%s\n' "$section" "$module" \
+                    "${MODULE_DESCRIPTION[$module]}" "$section" >> "$menu/lines"
+            fi
+
+            # Names are shown without the prefix of their section or element
+            indent="$head"
+            name="${id#"$module".}"
+            if _is_component "$id"; then
+                indent="$head    "
+                name="${id#*.}"
+            fi
+            printf '%s\tblock\t%s\t%s\t%s\t%s\n' "$id" "$indent" "$name" \
+                "${BLOCK_DESCRIPTION[$id]}" "$section" >> "$menu/lines"
+            section_blocks+=$(printf '  %-26s %s' "$id" "${BLOCK_DESCRIPTION[$id]}")$'\n'
+
+            _block_preview "$id" > "$menu/previews/$id"
+            if [ -n "${initial_selection[$id]}" ]; then
+                echo "$id" >> "$menu/selected"
+            fi
+        done
+
+        if [ -n "$section" ] && [ -n "$section_blocks" ]; then
+            printf '%s\n%s\n\nTab selects all its blocks, or unselects them all\nwhen they all are:\n\n%s' \
+                "$module" "${MODULE_DESCRIPTION[$module]}" "$section_blocks" > "$menu/previews/$section"
         fi
     done
 
@@ -344,8 +482,9 @@ _choose_blocks() {
 }
 
 # Shows the blocks that will run, in run order, with why the ones not
-# selected in the menu are there. Returns 0 to run them (Enter), non-zero to
-# go back to the selection (Esc).
+# selected in the menu are there. Prints "install" (Enter) or "save" (s, to
+# save the selection as a profile); returns non-zero to go back to the
+# selection (Esc).
 #
 # Args:
 #   order: The name of the array of the ordered block ids.
@@ -370,16 +509,146 @@ _confirm_summary() {
         _block_preview "$id" > "$previews/$id"
     done
 
-    local status=0
-    printf '%s\n' "${lines[@]}" | fzf --ansi --no-input \
+    # --expect prints the key that closed fzf first: empty for Enter, s
+    local output status=0
+    output=$(printf '%s\n' "${lines[@]}" | fzf --ansi --no-input \
             --delimiter '\t' --with-nth 2 --layout reverse \
             --border rounded --border-label " Summary — $(_count "${#summary_order[@]}" block), in run order " \
-            --header "Enter: install  Esc: back to the selection  ?: show/hide details" \
+            --header "Enter: install  s: save as a profile  Esc: back to the selection  ?: show/hide details" \
             --preview "cat '$previews'/{1}" --preview-window "right,45%,wrap,hidden" \
             --bind "?:toggle-preview" \
-        > /dev/null || status=$?
+            --expect s) \
+        || status=$?
     rm -rf "$previews"
-    return "$status"
+
+    if [ "$status" -ne 0 ]; then
+        return "$status"
+    fi
+    if [ "${output%%$'\n'*}" = "s" ]; then
+        echo "save"
+    else
+        echo "install"
+    fi
+}
+
+# Asks for the variant a new profile sets for each config choice: one of its
+# variants, or "ask" to ask for it during the setup. Fills the array with the
+# set ones.
+#
+# Args:
+#   variants: The name of an associative array receiving the variant of each
+#       choice folder (relative to the repository).
+_ask_profile_variants() {
+    local -n asked_variants="$1"
+    local marker dir folder description names file answer current
+    while IFS= read -r marker; do
+        dir=$(dirname "$marker")
+        folder="${dir#"$SETUP_DIR"/}"
+        description=$(head -n 1 "$marker")
+
+        names=()
+        for file in "$dir"/*; do
+            if [ -f "$file" ] && [ ! -L "$file" ]; then
+                file=$(basename "$file")
+                names+=("${file%.*}")
+            fi
+        done
+        current="${PROFILE_CHOICES[$folder]:-ask}"
+
+        while true; do
+            printf "\r\033[K\033[1;34m[i]\033[0m %s (%s or ask) [%s]: " \
+                "$description" "${names[*]}" "$current" > /dev/tty
+            read -r answer < /dev/tty
+            answer="${answer:-$current}"
+            if [ "$answer" = "ask" ] || [[ " ${names[*]} " == *" $answer "* ]]; then
+                break
+            fi
+            log_warn "Unknown variant: $answer"
+        done
+
+        if [ "$answer" != "ask" ]; then
+            asked_variants[$folder]="$answer"
+        fi
+    done < <(find "$SETUP_DIR" -name .choice -not -path "*/.git/*" | sort)
+}
+
+# Saves the blocks selected in the menu as a new local profile (in
+# USER_PROFILES_DIR, outside the repository), asking for its name,
+# description and variants, and uses its variants for this run. The
+# required blocks and the ones the selection needs are not written: they
+# come back on their own.
+#
+# Args:
+#   selected: The name of an associative array (block id -> 1) of the blocks
+#       selected in the menu.
+#   profile: The name of the variable holding the current profile name, set
+#       to the new one.
+_save_profile() {
+    local -n saved_selection="$1"
+    local -n current_profile="$2"
+
+    local name="" question answer
+    while true; do
+        printf "\r\033[K\033[1;34m[i]\033[0m Profile name (letters, digits, - and _; Enter to cancel): " > /dev/tty
+        read -r name < /dev/tty
+        if [ -z "$name" ]; then
+            log_info "Profile not saved."
+            return 0
+        fi
+        if [[ ! "$name" =~ ^[A-Za-z0-9_-]+$ ]] || [ "$name" = "none" ]; then
+            log_warn "Invalid profile name: $name"
+            continue
+        fi
+
+        question=""
+        if [ -f "$USER_PROFILES_DIR/$name.profile" ]; then
+            question="Your profile $name already exists, replace it?"
+        elif [ -f "$PROFILES_DIR/$name.profile" ]; then
+            question="The repository has a profile $name, yours will be used instead on this machine. Continue?"
+        fi
+        if [ -n "$question" ]; then
+            answer="n"
+            printf "\r\033[K\033[1;33m[!]\033[0m %s [y/N]: " "$question" > /dev/tty
+            read -r answer < /dev/tty
+            if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+                continue
+            fi
+        fi
+        break
+    done
+
+    local description=""
+    printf "\r\033[K\033[1;34m[i]\033[0m Description (shown in the profile menu): " > /dev/tty
+    read -r description < /dev/tty
+
+    local -A variants=()
+    _ask_profile_variants variants
+
+    local file="$USER_PROFILES_DIR/$name.profile" id folder
+    mkdir -p "$USER_PROFILES_DIR"
+    {
+        echo "# ${description:-$name}"
+        for id in "${BLOCK_IDS[@]}"; do
+            if [ -n "${saved_selection[$id]}" ]; then
+                echo "block $id"
+            fi
+        done
+        if [ "${#variants[@]}" -gt 0 ]; then
+            echo
+            for folder in $(printf '%s\n' "${!variants[@]}" | sort); do
+                echo "choice $folder ${variants[$folder]}"
+            done
+        fi
+    } > "$file"
+
+    # This run uses the new profile's variants
+    PROFILE_CHOICES=()
+    for folder in "${!variants[@]}"; do
+        PROFILE_CHOICES[$folder]="${variants[$folder]}"
+    done
+    current_profile="$name"
+
+    log_success "Profile saved: ${file/#$HOME/\~}"
 }
 
 # Adds to the selection the blocks the selected ones need, recursively, when
@@ -495,36 +764,45 @@ _plan() {
     fi
 }
 
-# Prints the blocks, with how they are offered on this machine, and the
-# profiles.
+# Prints the blocks by module, with how they are offered on this machine,
+# and the profiles.
 _list() {
-    local id label state file
-    printf '\nBlocks (id, module, description):\n\n'
-    for id in "${BLOCK_IDS[@]}"; do
-        state=""
-        if ! block_available "$id"; then
-            state="not for this machine"
-        elif [ -n "${BLOCK_REQUIRED[$id]}" ]; then
-            state="always run"
-        elif ! _offered "$id"; then
-            state="installed with ${id%%.*}"
-        fi
+    local -A module_of=()
+    local modules=() module id label state name
+    _index_modules module_of modules
 
-        label="$id"
-        if _is_component "$id"; then
-            label="  $id"
-        fi
-        printf '  %-28s %-15s %s' "$label" \
-            "$(basename "${BLOCK_SOURCE[$id]}" .sh)" "${BLOCK_DESCRIPTION[$id]}"
-        if [ -n "$state" ]; then
-            printf ' \033[2m(%s)\033[0m' "$state"
-        fi
-        printf '\n'
+    printf '\nBlocks, by module (modules/<module>.sh):\n'
+    for module in "${modules[@]}"; do
+        printf '\n  %s — %s\n' "$module" "${MODULE_DESCRIPTION[$module]}"
+        for id in "${BLOCK_IDS[@]}"; do
+            if [ "${module_of[$id]}" != "$module" ]; then
+                continue
+            fi
+
+            state=""
+            if ! block_available "$id"; then
+                state="not for this machine"
+            elif [ -n "${BLOCK_REQUIRED[$id]}" ]; then
+                state="always run"
+            elif ! _offered "$id"; then
+                state="installed with ${id%%.*}"
+            fi
+
+            label="$id"
+            if _is_component "$id"; then
+                label="  $id"
+            fi
+            printf '    %-28s %s' "$label" "${BLOCK_DESCRIPTION[$id]}"
+            if [ -n "$state" ]; then
+                printf ' \033[2m(%s)\033[0m' "$state"
+            fi
+            printf '\n'
+        done
     done
 
-    printf '\nProfiles (./setup.sh -p <name>):\n\n'
-    for file in "$PROFILES_DIR"/*.profile; do
-        printf '  %-12s %s\n' "$(basename "$file" .profile)" "$(sed -n '1s/^# *//p' "$file")"
+    printf '\nProfiles (./setup.sh -p <name>; local ones in %s):\n\n' "${USER_PROFILES_DIR/#$HOME/\~}"
+    for name in $(_profile_names); do
+        printf '  %-16s %s\n' "$name" "$(_profile_description "$name")"
     done
     printf '\n'
 }
@@ -638,7 +916,14 @@ main() {
             done
 
             _plan selection reasons order "$resume"
-            if _confirm_summary order reasons; then
+
+            # The summary shows again after saving a profile; Esc goes back
+            # to the selection
+            local action=""
+            while action=$(_confirm_summary order reasons) && [ "$action" = "save" ]; do
+                _save_profile selected profile
+            done
+            if [ "$action" = "install" ]; then
                 break
             fi
         done
