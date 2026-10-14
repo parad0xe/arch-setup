@@ -9,8 +9,8 @@ the installation and configuration of a complete Arch Linux environment.
   configs to deploy in menus, and check the summary of what will run; the
   blocks and configs they need are added and run in dependency order.
 * Optional Configs: The configs of this repository are deployed only when
-  selected, with their variants (keybindings, keyboard layout) picked in the
-  menu.
+  selected, with their variants (keybindings, keyboard layout, Waybar theme)
+  picked in the menu.
 * NVIDIA Optimized: Automatic driver installation and DRM configuration
   when an NVIDIA GPU is detected.
 * ARM Support: Runs on Arch Linux ARM (aarch64, e.g. Asahi Linux on Apple
@@ -75,6 +75,13 @@ validated, the install asks only the questions of the selected modules
 `./setup.sh --list` shows every block by module, whether it is offered on
 the machine, the configs and the profiles.
 
+To change the variants of a config already installed, `./setup.sh -c
+waybar` opens the configs menu with only that config, its variants on their
+current value, and deploys it again on `Enter`: it runs no block and adds
+none of the configs it needs. A config whose program is not installed (its
+`--program`, e.g. `waybar`) is skipped with a warning naming the block that
+installs it, unless that block is given too (`-b desktop -c waybar`).
+
 A profile is a file in `profiles/` (the repository's ones) or in
 `~/.local/share/arch-setup/profiles/` (your own ones, which take precedence
 over a repository profile of the same name): its first comment line is the
@@ -99,6 +106,7 @@ the block of its program:
 block neovim _setup_neovim "Neovim and the tools its config runs"
 
 config nvim .config/nvim .config/nvim "Neovim: plugins, LSP, linters" --block neovim \
+    --program nvim \
     --needs python \
     --needs node \
     --then _install_nvim_plugins
@@ -106,15 +114,32 @@ config nvim .config/nvim .config/nvim "Neovim: plugins, LSP, linters" --block ne
 
 The options of `block` and `config` are described in `modules/core.sh`. A
 new module file starts with `module "<description>"`, its heading in the
-menu. The variants of a config are the folders of its files holding a
-`.choice` file (its description) and one file per variant.
+menu.
+
+A config gets variants from a choice: a folder of its files holding a
+`.choice` file (its description, shown in the menu) and the variants, each
+a file (named without its extension: `vim.lua` is the `vim` variant) or a
+folder (`vim/`). When the config is deployed, the chosen variant is linked
+in the same folder as `selected.<ext>` (a file) or `selected` (a folder),
+and the config uses that link: the Hyprland config loads
+`conf/keybinds/selected`, a folder variant holding an `init.lua`. When the
+source of a config is itself a choice, each variant is a whole version of
+the config, and the config is linked to the selected one:
+
+```txt
+.config/waybar/
+├── .choice        Waybar theme
+├── default/       config, style.css
+├── glass/         config, style.css
+└── selected       → glass/   (~/.config/waybar → .config/waybar/selected)
+```
 
 ## Configuration
 
 Nothing needs to be edited before launching: the setup asks for your
 personal settings (SSH key email, Git name and email, timezone) during the
-install, and the config variants (keybindings, keyboard layout) are picked
-in the configs menu or set by the profile.
+install, and the config variants (keybindings, keyboard layout, Waybar
+theme) are picked in the configs menu or set by the profile.
 
 Machine-specific SSH settings (hosts, extra keys) go in `~/.ssh/config.d/`,
 which is included by the versioned SSH config but never versioned itself.
@@ -158,9 +183,11 @@ Options:
                          repeated
   -m, --module <name>    Same for the blocks of modules/<name>.sh; can be
                          repeated
-  -c, --config <pattern> Deploy the matching configs, with the blocks and
-                         configs they need, without the menus (e.g. hypr);
-                         can be repeated
+  -c, --config <pattern> Show only the matching configs whose program is
+                         installed in the configs menu, to pick their
+                         variants, and deploy them, without running any
+                         block nor adding the configs they need (e.g.
+                         waybar); can be repeated
   -r, --resume <block>   Skip the blocks that run before this one
   -l, --list             List the blocks, the configs and the profiles
   -h, --help             Show this help message
