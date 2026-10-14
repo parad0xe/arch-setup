@@ -202,10 +202,13 @@ link_config() {
 # CONFIG VARIANTS
 # ==========================================
 # A choice is a folder of a config holding a .choice file (its description
-# on the first line) and one file per variant. The selected variant is
-# linked as selected.<ext> in the same folder, and the config includes that
-# link. The variants are picked in the configs menu (or set by the profile)
-# and linked when the config is deployed.
+# on the first line) and its variants: files, named without their
+# extension, or folders. The chosen variant is linked in the same folder as
+# selected (a folder) or selected.<ext> (a file), and the config includes
+# that link. When the source of a config is itself a choice, each variant is
+# a whole version of the config, and the config is linked to the selection.
+# The variants are picked in the configs menu (or set by the profile) and
+# linked when the config is deployed.
 
 # Variant chosen for each choice folder (relative to the repository): set by
 # the profile (choice <folder> <variant>), then in the configs menu.
@@ -224,36 +227,71 @@ _clear_selection() {
     done
 }
 
-# Links a variant of a choice folder as selected.<ext>, replacing the
-# previous selection.
+# Prints the name of the selection link of a variant: selected for a
+# folder, selected.<ext> for a file.
 #
 # Args:
 #   dir: The choice folder.
-#   variant: The variant file name.
-_link_variant() {
-    local dir="$1"
-    local variant="$2"
-
-    local name="selected"
-    if [[ "$variant" == *.* ]]; then
-        name="selected.${variant##*.}"
+#   entry: The name of the variant file or folder in it.
+_selection_name() {
+    if [ -f "$1/$2" ] && [[ "$2" == *.* ]]; then
+        echo "selected.${2##*.}"
+    else
+        echo "selected"
     fi
-
-    _clear_selection "$dir"
-    ln -s "$variant" "$dir/$name"
 }
 
-# Prints the variants of a choice folder: its files without their extension,
-# the selection link excepted.
+# Links a variant of a choice folder as selected or selected.<ext>,
+# replacing the previous selection.
+#
+# Args:
+#   dir: The choice folder.
+#   entry: The name of the variant file or folder in it.
+_link_variant() {
+    local dir="$1"
+    local entry="$2"
+
+    _clear_selection "$dir"
+    ln -sn "$entry" "$dir/$(_selection_name "$dir" "$entry")"
+}
+
+# Prints the variants of a choice folder: its files without their extension
+# and its folders, the selection link excepted.
 #
 # Args:
 #   folder: The choice folder, relative to the repository.
 choice_variants() {
-    local file name
-    for file in "$SETUP_DIR/$1"/*; do
-        if [ -f "$file" ] && [ ! -L "$file" ]; then
-            name="${file##*/}"
+    local entry name
+    for entry in "$SETUP_DIR/$1"/*; do
+        if [ -L "$entry" ]; then
+            continue
+        fi
+        name="${entry##*/}"
+        if [ -d "$entry" ]; then
+            echo "$name"
+        elif [ -f "$entry" ]; then
             echo "${name%.*}"
+        fi
+    done
+}
+
+# Prints the name of the file or folder of a variant in its choice folder,
+# or nothing when there is none.
+#
+# Args:
+#   folder: The choice folder, relative to the repository.
+#   variant: The variant name.
+_variant_entry() {
+    local entry name
+    for entry in "$SETUP_DIR/$1"/*; do
+        if [ -L "$entry" ]; then
+            continue
+        fi
+        name="${entry##*/}"
+        if { [ -d "$entry" ] && [ "$name" = "$2" ]; } \
+            || { [ -f "$entry" ] && [ "${name%.*}" = "$2" ]; }; then
+            echo "$name"
+            return 0
         fi
     done
 }
@@ -274,7 +312,11 @@ choice_variant() {
     for link in "$SETUP_DIR/$folder"/selected "$SETUP_DIR/$folder"/selected.*; do
         if [ -L "$link" ] && [ -e "$link" ]; then
             name=$(readlink "$link")
-            echo "${name%.*}"
+            if [ -d "$link" ]; then
+                echo "$name"
+            else
+                echo "${name%.*}"
+            fi
             return
         fi
     done
@@ -428,10 +470,11 @@ run_block() {
 # folder, declared with `config` by the module of the program it configures.
 # setup.sh offers the configs of the blocks it runs in a menu, adds the
 # blocks and configs they need, and deploys them after all the blocks.
+# With -c, it offers only the given configs whose program is installed.
 
 declare -ga CONFIG_IDS=()
 declare -gA CONFIG_SOURCE=() CONFIG_TARGET=() CONFIG_DESCRIPTION=() CONFIG_BLOCK=()
-declare -gA CONFIG_NEEDS=() CONFIG_NEEDS_CONFIG=() CONFIG_THEN=()
+declare -gA CONFIG_PROGRAM=() CONFIG_NEEDS=() CONFIG_NEEDS_CONFIG=() CONFIG_THEN=()
 
 # Declares a config the setup can deploy.
 #
@@ -443,6 +486,9 @@ declare -gA CONFIG_NEEDS=() CONFIG_NEEDS_CONFIG=() CONFIG_THEN=()
 #   ...: Options:
 #       --block <id>         The block installing the program it configures:
 #                            the config is offered when that block runs.
+#       --program <command>  The command of that program: with -c, the
+#                            config is offered only when it is installed
+#                            (or when its block runs).
 #       --needs <id>         A block without which this config would break
 #                            (it runs that block's commands), added with it.
 #                            Can be repeated.
@@ -466,6 +512,7 @@ config() {
     while [ "$#" -gt 0 ]; do
         case "$1" in
             --block) CONFIG_BLOCK[$id]="$2"; shift ;;
+            --program) CONFIG_PROGRAM[$id]="$2"; shift ;;
             --needs) CONFIG_NEEDS[$id]+="$2 "; shift ;;
             --needs-config) CONFIG_NEEDS_CONFIG[$id]+="$2 "; shift ;;
             --then) CONFIG_THEN[$id]="$2"; shift ;;
@@ -495,25 +542,31 @@ config_choices() {
 
 # Deploys a config: links the variant to use for each of its choices, links
 # the config into the home folder (an existing one is kept as .bak), then
-# runs its --then function.
+# runs its --then function. A config whose source is a choice is linked to
+# its selected variant.
 #
 # Args:
 #   id: The config id.
 deploy_config() {
     local id="$1"
-    local folder variant file name
+    local folder variant entry
     while IFS= read -r folder; do
         variant=$(choice_variant "$folder")
-        for file in "$SETUP_DIR/$folder"/*; do
-            name="${file##*/}"
-            if [ -f "$file" ] && [ ! -L "$file" ] && [ "${name%.*}" = "$variant" ]; then
-                log_info "Using the $variant variant of ${folder#.config/}"
-                _link_variant "$SETUP_DIR/$folder" "$name"
-            fi
-        done
+        entry=$(_variant_entry "$folder" "$variant")
+        if [ -z "$entry" ]; then
+            log_warn "${folder#.config/} has no variant $variant"
+            continue
+        fi
+        log_info "Using the $variant variant of ${folder#.config/}"
+        _link_variant "$SETUP_DIR/$folder" "$entry"
     done < <(config_choices "$id")
 
-    link_config "$SETUP_DIR/${CONFIG_SOURCE[$id]}" "$HOME/${CONFIG_TARGET[$id]}"
+    local source="$SETUP_DIR/${CONFIG_SOURCE[$id]}"
+    if [ -f "$source/.choice" ]; then
+        entry=$(_variant_entry "${CONFIG_SOURCE[$id]}" "$(choice_variant "${CONFIG_SOURCE[$id]}")")
+        source="$source/$(_selection_name "$source" "$entry")"
+    fi
+    link_config "$source" "$HOME/${CONFIG_TARGET[$id]}"
 
     if [ -n "${CONFIG_THEN[$id]}" ]; then
         "${CONFIG_THEN[$id]}"

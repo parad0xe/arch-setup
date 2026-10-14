@@ -225,6 +225,7 @@ block fonts _install_fonts "JetBrains Mono Nerd Font"
 # (applets, wallpaper engines) and its scripts. Its launcher and wallpaper
 # selector use the rofi themes.
 config hypr .config/hypr .config/hypr "Hyprland: keybindings, autostart, scripts" --block desktop \
+    --program Hyprland \
     --needs desktop.hypr-tools \
     --needs desktop.tools \
     --needs desktop.applets \
@@ -239,6 +240,7 @@ config hypr .config/hypr .config/hypr "Hyprland: keybindings, autostart, scripts
 # Its modules run the Hyprland scripts (wifi, brightness, laptop keyboard),
 # pavucontrol, blueman, wlogout, and btop in Ghostty
 config waybar .config/waybar .config/waybar "Waybar bar and its modules" --block desktop \
+    --program waybar \
     --needs desktop.tools \
     --needs desktop.applets \
     --needs app.ghostty \
@@ -246,12 +248,15 @@ config waybar .config/waybar .config/waybar "Waybar bar and its modules" --block
     --needs-config hypr
 
 config mako .config/mako .config/mako "mako notifications" --block desktop \
+    --program mako \
     --needs fonts
 
 config rofi .config/rofi .config/rofi "rofi launcher and menu themes" --block desktop.tools \
+    --program rofi \
     --needs fonts
 
 # Its lock and log out buttons run the Hyprland scripts
 config wlogout .config/wlogout .config/wlogout "wlogout power menu" --block desktop.tools \
+    --program wlogout \
     --needs fonts \
     --needs-config hypr

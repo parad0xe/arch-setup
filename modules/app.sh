@@ -120,4 +120,5 @@ block app.yubico    _install_yubico_authenticator "Yubico Authenticator" --unles
     --needs securitykey
 
 config ghostty .config/ghostty .config/ghostty "Ghostty terminal: font, theme" --block app.ghostty \
+    --program ghostty \
     --needs fonts

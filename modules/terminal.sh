@@ -57,8 +57,14 @@ block yazi  _install_yazi  "yazi terminal file manager"
 
 # It sets Vim as the editor (git commit, sudoedit...)
 config zshrc .config/zshrc .zshrc "Zsh: Oh My Zsh plugins, aliases, prompt, tools" --block shell \
+    --program zsh \
     --needs vim
 
-config starship .config/starship/nerd-font-symbols.toml .config/starship.toml "Starship prompt with Nerd Font symbols" --block shell
-config fastfetch .config/fastfetch .config/fastfetch "fastfetch system summary" --block shell
-config vimrc .config/vimrc .vimrc "Vim settings" --block vim
+config starship .config/starship/nerd-font-symbols.toml .config/starship.toml "Starship prompt with Nerd Font symbols" --block shell \
+    --program starship
+
+config fastfetch .config/fastfetch .config/fastfetch "fastfetch system summary" --block shell \
+    --program fastfetch
+
+config vimrc .config/vimrc .vimrc "Vim settings" --block vim \
+    --program vim

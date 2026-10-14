@@ -105,6 +105,7 @@ block neovim _setup_neovim "Neovim and the tools its config runs"
 # Mason installs its language servers and linters with pip (Python) and npm
 # (Node.js)
 config nvim .config/nvim .config/nvim "Neovim: plugins (vim-plug), LSP, linters, formatters" --block neovim \
+    --program nvim \
     --needs python \
     --needs node \
     --then _install_nvim_plugins

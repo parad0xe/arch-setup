@@ -147,4 +147,5 @@ block timezone _setup_time "System timezone and NTP synchronization" --interacti
 
 # openssh comes with the base packages
 config ssh .config/ssh/config .ssh/config "SSH client: agent, keys (hosts in ~/.ssh/config.d)" --block system.base \
+    --program ssh \
     --then _create_ssh_config_d

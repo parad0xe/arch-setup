@@ -55,9 +55,11 @@ Options:
                          repeated
   -m, --module <name>    Same for the blocks of modules/<name>.sh; can be
                          repeated
-  -c, --config <pattern> Deploy the matching configs, with the blocks and
-                         configs they need, without the menus (e.g. hypr);
-                         can be repeated
+  -c, --config <pattern> Show only the matching configs whose program is
+                         installed in the configs menu, to pick their
+                         variants, and deploy them, without running any
+                         block nor adding the configs they need (e.g.
+                         waybar); can be repeated
   -r, --resume <block>   Skip the blocks that run before this one
   -l, --list             List the blocks, the configs and the profiles
   -h, --help             Show this help message
@@ -86,9 +88,9 @@ _load_modules() {
 
 # Stops on a mistake in the declarations of a module: a block or config
 # referring to one that does not exist, a config without its --block, its
-# file or its --then function.
+# --program, its file or its --then function.
 _check_declarations() {
-    local id other
+    local id other folder names duplicates
     for id in "${BLOCK_IDS[@]}"; do
         for other in ${BLOCK_NEEDS[$id]} ${BLOCK_AFTER[$id]}; do
             if [ -z "${BLOCK_FUNCTION[$other]}" ]; then
@@ -101,6 +103,10 @@ _check_declarations() {
     for id in "${CONFIG_IDS[@]}"; do
         if [ -z "${CONFIG_BLOCK[$id]}" ]; then
             log_error "Config $id has no --block"
+            exit 1
+        fi
+        if [ -z "${CONFIG_PROGRAM[$id]}" ]; then
+            log_error "Config $id has no --program"
             exit 1
         fi
         for other in ${CONFIG_BLOCK[$id]} ${CONFIG_NEEDS[$id]}; do
@@ -123,6 +129,20 @@ _check_declarations() {
             log_error "Config $id: unknown --then function ${CONFIG_THEN[$id]}"
             exit 1
         fi
+
+        # A variant name has to point to one file or folder of its choice
+        while IFS= read -r folder; do
+            names=$(choice_variants "$folder")
+            duplicates=$(sort <<< "$names" | uniq -d | tr '\n' ' ')
+            if [ -z "$names" ]; then
+                log_error "Config $id: $folder has no variant"
+                exit 1
+            fi
+            if [ -n "$duplicates" ]; then
+                log_error "Config $id: $folder has a file and a folder named ${duplicates% }"
+                exit 1
+            fi
+        done < <(config_choices "$id")
     done
 }
 
@@ -366,16 +386,19 @@ _block_preview() {
 #
 # Args:
 #   id: The config id.
+#   added: What becomes of the blocks and configs it needs (default: "added
+#       automatically").
 _config_preview() {
     local id="$1"
+    local added="${2:-added automatically}"
     printf '%s → ~/%s\n%s\n\n' "$id" "${CONFIG_TARGET[$id]}" "${CONFIG_DESCRIPTION[$id]}"
     printf 'Links %s from the repository; an existing config\nis kept as .bak.\n' "${CONFIG_SOURCE[$id]}"
     printf '\nOffered when this block runs: %s\n' "${CONFIG_BLOCK[$id]}"
     if [ -n "${CONFIG_NEEDS[$id]}" ]; then
-        printf '\nNeeds the blocks (added automatically): %s\n' "${CONFIG_NEEDS[$id]% }"
+        printf '\nNeeds the blocks (%s): %s\n' "$added" "${CONFIG_NEEDS[$id]% }"
     fi
     if [ -n "${CONFIG_NEEDS_CONFIG[$id]}" ]; then
-        printf '\nNeeds the configs (added automatically): %s\n' "${CONFIG_NEEDS_CONFIG[$id]% }"
+        printf '\nNeeds the configs (%s): %s\n' "$added" "${CONFIG_NEEDS_CONFIG[$id]% }"
     fi
     if [ -n "${CONFIG_THEN[$id]}" ]; then
         printf '\nOnce linked:\n%s\n' "$(function_doc "${CONFIG_THEN[$id]}")"
@@ -700,9 +723,17 @@ EOF
 #   offered: The name of an array of the config ids to show.
 #   selected: The name of an associative array (config id -> 1) of the
 #       configs selected when the menu opens.
+#   mode: "setup" in the setup menus, where Enter goes to the summary, or
+#       "alone" for -c, where Enter deploys the configs alone, without the
+#       blocks and configs they need.
 _choose_configs() {
     local -n shown_configs="$1"
     local -n initial_configs="$2"
+    local keys="Enter: summary  Esc: back to the blocks" added="added automatically"
+    if [ "$3" = alone ]; then
+        keys="Enter: deploy  Esc: cancel"
+        added="not added with -c"
+    fi
     local menu
     menu=$(mktemp -d)
     mkdir "$menu/previews" "$menu/options"
@@ -716,7 +747,7 @@ _choose_configs() {
     local id folder variant index=0
     for id in "${shown_configs[@]}"; do
         printf '%s\tconfig\t%s\t%s\t\n' "$id" "$id" "${CONFIG_DESCRIPTION[$id]}" >> "$menu/lines"
-        _config_preview "$id" > "$menu/previews/$id"
+        _config_preview "$id" "$added" > "$menu/previews/$id"
         if [ -n "${initial_configs[$id]}" ]; then
             echo "$id" >> "$menu/selected"
         fi
@@ -736,7 +767,7 @@ _choose_configs() {
     "$menu/render" "$menu" | fzf --no-input \
             --delimiter '\t' --with-nth 2 --layout reverse \
             --border rounded --border-label " Configs to deploy " \
-            --header "Tab: select/unselect  ←/→: change a variant  Enter: summary  Esc: back to the blocks" \
+            --header "Tab: select/unselect  ←/→: change a variant  $keys" \
             --preview "cat '$menu/previews/'{1}" --preview-window "right,45%,wrap" \
             --bind "tab:transform('$menu/key' '$menu' tab {1})" \
             --bind "right:transform('$menu/key' '$menu' right {1})" \
@@ -1193,8 +1224,9 @@ main() {
     local order=() config_order=() id
 
     if [ "${#patterns[@]}" -gt 0 ] || [ "${#modules[@]}" -gt 0 ] || [ "${#config_patterns[@]}" -gt 0 ]; then
-        # Direct mode: the given blocks and configs, without the menus nor
-        # the required blocks
+        # Direct mode: the given blocks and the ones they need, without the
+        # menus nor the required blocks, and the given configs alone (no
+        # block, no needed config), their variants picked in the configs menu
         local pattern module
         for pattern in "${patterns[@]}"; do
             if [ -z "$(_matching_blocks "$pattern")" ]; then
@@ -1219,23 +1251,45 @@ main() {
                 log_warn "Skipping $id: not for this machine"
             fi
         done
-        for id in $(_matching_configs "${config_patterns[@]}"); do
-            configs[$id]=1
-        done
-
-        _add_config_needs configs config_reasons selection reasons
         _plan selection reasons order "$resume"
-        mapfile -t config_order < <(_config_order configs)
+
+        # A config is offered when its program is installed, or installed by
+        # the blocks given with it
+        local -A running=()
+        local offered=() output keyword arg value
+        for id in "${order[@]}"; do
+            running[$id]=1
+        done
+        for id in $(_matching_configs "${config_patterns[@]}"); do
+            if [ -n "${running[${CONFIG_BLOCK[$id]}]}" ] || command -v "${CONFIG_PROGRAM[$id]}" > /dev/null; then
+                offered+=("$id")
+            else
+                log_warn "Skipping config $id: ${CONFIG_PROGRAM[$id]} is not installed (./setup.sh -b ${CONFIG_BLOCK[$id]} installs it)"
+            fi
+        done
+        if [ "${#offered[@]}" -gt 0 ]; then
+            _ensure_fzf
+            for id in "${offered[@]}"; do
+                configs[$id]=1
+            done
+            if ! output=$(_choose_configs offered configs alone); then
+                log_info "Setup cancelled."
+                exit 0
+            fi
+            configs=()
+            while read -r keyword arg value; do
+                case "$keyword" in
+                    config) configs[$arg]=1 ;;
+                    choice) CHOSEN_VARIANTS[$arg]="$value" ;;
+                esac
+            done <<< "$output"
+            mapfile -t config_order < <(_config_order configs)
+        fi
 
         init_ui
         for id in "${order[@]}"; do
             if [ -n "${reasons[$id]}" ]; then
                 log_info "Adding $id (${reasons[$id]})"
-            fi
-        done
-        for id in "${config_order[@]}"; do
-            if [ -n "${config_reasons[$id]}" ]; then
-                log_info "Adding config $id (${config_reasons[$id]})"
             fi
         done
     else
@@ -1298,7 +1352,7 @@ main() {
                     fi
                     configs_shown=true
 
-                    if ! output=$(_choose_configs offered selected_configs); then
+                    if ! output=$(_choose_configs offered selected_configs setup); then
                         step="blocks"
                         continue
                     fi
