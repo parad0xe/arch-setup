@@ -29,6 +29,9 @@ _install_hypr_stack() {
     log_info "Installing hyprlock..."
     install_pkg "hyprlock"
 
+    log_info "Installing hyprshutdown (used to log out)..."
+    install_pkg "hyprshutdown"
+
     log_info "Installing hyprmon..."
 	install_aur_pkg "hyprmon-bin"
 }

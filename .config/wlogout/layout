@@ -6,7 +6,7 @@
 }
 {
     "label" : "logout",
-    "action" : "loginctl terminate-user $USER",
+    "action" : "~/.config/hypr/scripts/logout.sh",
     "text" : "Logout",
     "keybind" : "e"
 }
