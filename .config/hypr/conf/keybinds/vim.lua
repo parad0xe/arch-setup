@@ -12,7 +12,7 @@ local mainMod  = "SUPER"
 -- ==========================================
 hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + W",      hl.dsp.exec_cmd("brave"))
-hl.bind(mainMod .. " + E",      hl.dsp.exec_cmd("thunar"))
+hl.bind(mainMod .. " + E",      hl.dsp.exec_cmd("nautilus --new-window"))
 hl.bind(mainMod .. " + L",      hl.dsp.exec_cmd("~/.config/hypr/scripts/lock.sh"))
 hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd("~/.config/hypr/scripts/logout.sh"))
 hl.bind("CTRL + Space",         hl.dsp.exec_cmd("~/.config/hypr/scripts/wall-selector.sh"))

@@ -242,7 +242,7 @@ block desktop _install_desktop "Hyprland desktop: Hyprland, Waybar, mako and the
     --needs audio \
     --needs app.ghostty \
     --needs app.brave \
-    --needs app.thunar
+    --needs app.nautilus
 
 block desktop.hypr-tools         _install_hypr_tools        "hyprlock (lock), hyprshutdown (log out), hyprmon (monitors)"
 block desktop.tools              _install_desktop_tools     "rofi, wlogout, screenshots, clipboard, media keys, notifications"
