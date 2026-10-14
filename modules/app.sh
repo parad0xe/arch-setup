@@ -46,8 +46,7 @@ _build_ghostty_git() {
     log_success "Ghostty built and installed."
 }
 
-# Installs the Ghostty terminal (built from the AUR on ARM) and links its
-# config.
+# Installs the Ghostty terminal (built from the AUR on ARM).
 _install_ghostty() {
     log_info "Installing Ghostty terminal..."
     if is_arm; then
@@ -55,9 +54,6 @@ _install_ghostty() {
     else
         install_pkg "ghostty"
     fi
-
-    log_info "Linking Ghostty config..."
-    link_config "$SETUP_DIR/.config/ghostty" "$HOME/.config/ghostty"
 }
 
 # Installs the Brave web browser.
@@ -109,10 +105,7 @@ _install_yubico_authenticator() {
     install_aur_pkg "yubico-authenticator-bin"
 }
 
-# Its config uses the JetBrains Mono Nerd Font
-block app.ghostty _install_ghostty "Ghostty terminal and its config" \
-    --needs fonts
-
+block app.ghostty  _install_ghostty  "Ghostty terminal"
 block app.brave    _install_brave    "Brave web browser"
 block app.nautilus _install_nautilus "GNOME Files (Nautilus) file manager"
 block app.keepass  _install_keepass  "KeePass password manager"
@@ -125,3 +118,6 @@ block app.discord   _install_discord              "Discord"           --unless i
 # It reads the YubiKey through the pcscd service
 block app.yubico    _install_yubico_authenticator "Yubico Authenticator" --unless is_arm \
     --needs securitykey
+
+config ghostty .config/ghostty .config/ghostty "Ghostty terminal: font, theme" --block app.ghostty \
+    --needs fonts

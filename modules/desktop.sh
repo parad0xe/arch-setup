@@ -3,8 +3,7 @@
 module "Hyprland desktop"
 
 # Installs Hyprland with its bar (Waybar), notifications (mako), polkit
-# agent, Qt Wayland support, socat (monitor hotplug script) and btop (opened
-# from Waybar), and links the Hyprland, Waybar and mako configs.
+# agent and Qt Wayland support.
 _install_desktop() {
     local pkgs=(
         "hyprland"
@@ -13,19 +12,12 @@ _install_desktop() {
         "polkit-kde-agent"
         "qt5-wayland"
         "qt6-wayland"
-        "socat"
-        "btop"
     )
 
     log_info "Installing Hyprland stack..."
     for pkg in "${pkgs[@]}"; do
         install_pkg "$pkg"
     done
-
-    log_info "Linking Hyprland, Waybar and mako configs..."
-    link_config "$SETUP_DIR/.config/hypr" "$HOME/.config/hypr"
-    link_config "$SETUP_DIR/.config/waybar" "$HOME/.config/waybar"
-    link_config "$SETUP_DIR/.config/mako" "$HOME/.config/mako"
 }
 
 # Installs the Hypr tools the config runs: hyprlock (lock screen),
@@ -76,10 +68,10 @@ _build_rofi() {
     log_success "rofi $(pacman -Q rofi | cut -d ' ' -f 2) built and installed."
 }
 
-# Installs the tools the Hyprland config runs: rofi (launcher and menus),
-# wlogout (power menu), grim, slurp and satty (screenshots), wl-clipboard,
-# playerctl (media keys), libnotify (notifications), brightnessctl and
-# pavucontrol, and links the rofi and wlogout configs.
+# Installs the tools the Hyprland and Waybar configs run: rofi (launcher and
+# menus), wlogout (power menu), grim, slurp and satty (screenshots),
+# wl-clipboard, playerctl (media keys), libnotify (notifications),
+# brightnessctl, pavucontrol, socat (monitor hotplug script) and btop.
 _install_desktop_tools() {
     local pkgs=(
         "wl-clipboard"
@@ -90,6 +82,8 @@ _install_desktop_tools() {
         "libnotify"
         "brightnessctl"
         "pavucontrol"
+        "socat"
+        "btop"
     )
 
     log_info "Installing desktop tools..."
@@ -106,10 +100,6 @@ _install_desktop_tools() {
 
     log_info "Installing wlogout (power menu)..."
     install_aur_pkg "wlogout"
-
-    log_info "Linking rofi and wlogout configs..."
-    link_config "$SETUP_DIR/.config/rofi" "$HOME/.config/rofi"
-    link_config "$SETUP_DIR/.config/wlogout" "$HOME/.config/wlogout"
 }
 
 # Installs the tray applets started by the Hyprland config: nm-applet
@@ -127,18 +117,6 @@ _install_wallpaper_engines() {
     install_pkg "awww"
     install_pkg "ffmpegthumbnailer"
     install_aur_pkg "mpvpaper"
-}
-
-# Picks the Hyprland keybindings variant (.config/hypr/conf/keybinds): the
-# one set by the profile, or asks for it.
-_choose_keybinds() {
-    choose_variant "$SETUP_DIR/.config/hypr/conf/keybinds"
-}
-
-# Picks the keyboard layout variant (.config/hypr/conf/keyboard): the one set
-# by the profile, or asks for it.
-_choose_keyboard() {
-    choose_variant "$SETUP_DIR/.config/hypr/conf/keyboard"
 }
 
 # Installs and applies the Tokyo Night theme for SDDM.
@@ -227,22 +205,7 @@ _install_fonts() {
     install_pkg "ttf-jetbrains-mono-nerd"
 }
 
-# The Hyprland config runs commands from all these blocks: keybindings
-# (terminal, browser, file manager, lock, launcher, screenshots, volume),
-# autostart (applets, wallpaper) and Waybar clicks (wifi, Bluetooth, power
-# menu)
-block desktop _install_desktop "Hyprland desktop: Hyprland, Waybar, mako and their configs" \
-    --needs desktop.hypr-tools \
-    --needs desktop.tools \
-    --needs desktop.applets \
-    --needs desktop.wallpaper-engines \
-    --needs desktop.keybinds \
-    --needs desktop.keyboard \
-    --needs fonts \
-    --needs audio \
-    --needs app.ghostty \
-    --needs app.brave \
-    --needs app.nautilus
+block desktop _install_desktop "Hyprland desktop: Hyprland, Waybar, mako, polkit agent"
 
 block desktop.hypr-tools         _install_hypr_tools        "hyprlock (lock), hyprshutdown (log out), hyprmon (monitors)"
 block desktop.tools              _install_desktop_tools     "rofi, wlogout, screenshots, clipboard, media keys, notifications"
@@ -250,12 +213,45 @@ block desktop.applets            _install_applets           "Network and Bluetoo
     --needs network \
     --needs bluetooth
 block desktop.wallpaper-engines  _install_wallpaper_engines "Wallpaper engines: awww (images), mpvpaper (videos)"
-block desktop.keybinds           _choose_keybinds           "Hyprland keybindings variant" --interactive
-block desktop.keyboard           _choose_keyboard           "Keyboard layout variant" --interactive
-
 block desktop.sddm               _setup_sddm                "SDDM login screen with the Tokyo Night theme"
 block desktop.cursor             _install_cursor_theme      "Bibata cursor theme"
 block desktop.icons              _setup_icon_theme          "Papirus-Dark icon theme"
 block desktop.ddcutil            _setup_ddcutil             "ddcutil: external monitors brightness in the brightness menu"
 
 block fonts _install_fonts "JetBrains Mono Nerd Font"
+
+# The Hyprland config runs commands from these blocks: keybindings (terminal,
+# browser, file manager, lock, launcher, screenshots, volume), autostart
+# (applets, wallpaper engines) and its scripts. Its launcher and wallpaper
+# selector use the rofi themes.
+config hypr .config/hypr .config/hypr "Hyprland: keybindings, autostart, scripts" --block desktop \
+    --needs desktop.hypr-tools \
+    --needs desktop.tools \
+    --needs desktop.applets \
+    --needs desktop.wallpaper-engines \
+    --needs audio \
+    --needs fonts \
+    --needs app.ghostty \
+    --needs app.brave \
+    --needs app.nautilus \
+    --needs-config rofi
+
+# Its modules run the Hyprland scripts (wifi, brightness, laptop keyboard),
+# pavucontrol, blueman, wlogout, and btop in Ghostty
+config waybar .config/waybar .config/waybar "Waybar bar and its modules" --block desktop \
+    --needs desktop.tools \
+    --needs desktop.applets \
+    --needs app.ghostty \
+    --needs fonts \
+    --needs-config hypr
+
+config mako .config/mako .config/mako "mako notifications" --block desktop \
+    --needs fonts
+
+config rofi .config/rofi .config/rofi "rofi launcher and menu themes" --block desktop.tools \
+    --needs fonts
+
+# Its lock and log out buttons run the Hyprland scripts
+config wlogout .config/wlogout .config/wlogout "wlogout power menu" --block desktop.tools \
+    --needs fonts \
+    --needs-config hypr

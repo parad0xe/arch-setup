@@ -126,6 +126,17 @@ log_error() {
     printf "\r\033[K\033[1;31m[✖]\033[0m %s\n" "$1" > /dev/tty
 }
 
+# Asks a yes/no question, yes being the answer to Enter.
+#
+# Args:
+#   question: The question to display.
+confirm() {
+    local answer="y"
+    printf "\r\033[K\033[1;34m[i]\033[0m %s [Y/n]: " "$1" > /dev/tty
+    read -r answer < /dev/tty
+    [[ ! "$answer" =~ ^[Nn]$ ]]
+}
+
 # Returns success on a 64-bit ARM CPU (e.g. Apple Silicon with Asahi Linux),
 # whose repositories (Arch Linux ARM) lack some x86_64 packages.
 is_arm() {
@@ -190,15 +201,15 @@ link_config() {
 # ==========================================
 # CONFIG VARIANTS
 # ==========================================
-# A choice is a folder holding a .choice file (its description on the first
-# line) and one file per variant. The selected variant is linked as
-# selected.<ext> in the same folder, and the configs include that link. The
-# module of a config picks its variants with choose_variant; a profile can
-# set them (choice <folder> <variant>).
+# A choice is a folder of a config holding a .choice file (its description
+# on the first line) and one file per variant. The selected variant is
+# linked as selected.<ext> in the same folder, and the config includes that
+# link. The variants are picked in the configs menu (or set by the profile)
+# and linked when the config is deployed.
 
-# Variant set by the profile for each choice folder (relative to the
-# repository), filled by setup.sh.
-declare -gA PROFILE_CHOICES=()
+# Variant chosen for each choice folder (relative to the repository): set by
+# the profile (choice <folder> <variant>), then in the configs menu.
+declare -gA CHOSEN_VARIANTS=()
 
 # Removes the selection link(s) of a choice folder.
 #
@@ -232,88 +243,49 @@ _link_variant() {
     ln -s "$variant" "$dir/$name"
 }
 
-# Links the variant of a choice set by the profile, or asks which one to use
-# (the current one, or default, being the answer to Enter).
+# Prints the variants of a choice folder: its files without their extension,
+# the selection link excepted.
 #
 # Args:
-#   dir: The choice folder.
-choose_variant() {
-    local dir="$1"
-    local description
-    description=$(head -n 1 "$dir/.choice")
-
-    local variants=()
-    local file
-    for file in "$dir"/*; do
+#   folder: The choice folder, relative to the repository.
+choice_variants() {
+    local file name
+    for file in "$SETUP_DIR/$1"/*; do
         if [ -f "$file" ] && [ ! -L "$file" ]; then
-            variants+=("$(basename "$file")")
+            name="${file##*/}"
+            echo "${name%.*}"
         fi
     done
+}
 
-    if [ "${#variants[@]}" -eq 0 ]; then
-        log_warn "No variant found for: $description"
-        return 0
+# Prints the variant to use for a choice folder: the chosen one, else the
+# linked one, else "default", else the first one.
+#
+# Args:
+#   folder: The choice folder, relative to the repository.
+choice_variant() {
+    local folder="$1"
+    if [ -n "${CHOSEN_VARIANTS[$folder]}" ]; then
+        echo "${CHOSEN_VARIANTS[$folder]}"
+        return
     fi
 
-    local variant
-
-    # The variant set by the profile, when it names an existing one
-    local wanted="${PROFILE_CHOICES[${dir#"$SETUP_DIR"/}]}"
-    if [ -n "$wanted" ]; then
-        for variant in "${variants[@]}"; do
-            if [ "${variant%.*}" = "$wanted" ]; then
-                _link_variant "$dir" "$variant"
-                log_success "$description: $wanted (profile)"
-                return 0
-            fi
-        done
-        log_warn "$description: the profile asks for '$wanted', which does not exist."
-    fi
-
-    local current="${variants[0]}"
-    for variant in "${variants[@]}"; do
-        if [ "${variant%.*}" = "default" ]; then
-            current="$variant"
-        fi
-    done
-
-    local link
-    for link in "$dir"/selected "$dir"/selected.*; do
+    local link name
+    for link in "$SETUP_DIR/$folder"/selected "$SETUP_DIR/$folder"/selected.*; do
         if [ -L "$link" ] && [ -e "$link" ]; then
-            current=$(basename "$(readlink "$link")")
+            name=$(readlink "$link")
+            echo "${name%.*}"
+            return
         fi
     done
 
-    log_info "$description (${dir#"$SETUP_DIR"/}):"
-    local i
-    for i in "${!variants[@]}"; do
-        local mark=""
-        if [ "${variants[i]}" = "$current" ]; then
-            mark=" (current)"
-        fi
-        printf "      %d) %s%s\n" "$((i + 1))" "${variants[i]%.*}" "$mark" > /dev/tty
-    done
-
-    local answer=""
-    while true; do
-        printf "\r\033[K\033[1;34m[i]\033[0m Which one? [Enter = %s]: " "${current%.*}" > /dev/tty
-        read -r answer < /dev/tty
-
-        if [ -z "$answer" ]; then
-            answer="$current"
-            break
-        fi
-
-        if [[ "$answer" =~ ^[0-9]+$ ]] && (( answer >= 1 && answer <= ${#variants[@]} )); then
-            answer="${variants[answer - 1]}"
-            break
-        fi
-
-        log_warn "Invalid choice: $answer"
-    done
-
-    _link_variant "$dir" "$answer"
-    log_success "$description: ${answer%.*}"
+    local variants
+    variants=$(choice_variants "$folder")
+    if grep -qx "default" <<< "$variants"; then
+        echo "default"
+    else
+        head -n 1 <<< "$variants"
+    fi
 }
 
 # ==========================================
@@ -406,16 +378,29 @@ block_available() {
     fi
 }
 
+# Prints the comment written above a function, in the file declaring it.
+#
+# Args:
+#   function: The function name.
+function_doc() {
+    local fn line file
+    read -r fn line file < <(shopt -s extdebug; declare -F "$1") || true
+    if [ -z "$file" ]; then
+        return 0
+    fi
+    awk -v fn="$fn" '
+        $0 ~ "^" fn "\\(\\)" { printf "%s", doc; exit }
+        /^#/ { sub(/^# ?/, ""); doc = doc $0 "\n"; next }
+        { doc = "" }
+    ' "$file"
+}
+
 # Prints the comment written above the function of a block.
 #
 # Args:
 #   id: The block id.
 block_doc() {
-    awk -v fn="${BLOCK_FUNCTION[$1]}" '
-        $0 ~ "^" fn "\\(\\)" { printf "%s", doc; exit }
-        /^#/ { sub(/^# ?/, ""); doc = doc $0 "\n"; next }
-        { doc = "" }
-    ' "${BLOCK_SOURCE[$1]}"
+    function_doc "${BLOCK_FUNCTION[$1]}"
 }
 
 # Runs a block: behind the spinner, or in the foreground when interactive.
@@ -434,4 +419,111 @@ run_block() {
     log_info "$description"
     "${BLOCK_FUNCTION[$id]}"
     printf "\033[1;32m✔\033[0m  %s\n\n" "$description"
+}
+
+# ==========================================
+# CONFIGS
+# ==========================================
+# A config of the repository is deployed as a symbolic link from the home
+# folder, declared with `config` by the module of the program it configures.
+# setup.sh offers the configs of the blocks it runs in a menu, adds the
+# blocks and configs they need, and deploys them after all the blocks.
+
+declare -ga CONFIG_IDS=()
+declare -gA CONFIG_SOURCE=() CONFIG_TARGET=() CONFIG_DESCRIPTION=() CONFIG_BLOCK=()
+declare -gA CONFIG_NEEDS=() CONFIG_NEEDS_CONFIG=() CONFIG_THEN=()
+
+# Declares a config the setup can deploy.
+#
+# Args:
+#   id: The config id (e.g. waybar).
+#   source: Its path in the repository (e.g. .config/waybar).
+#   target: Where it is linked, from the home folder (e.g. .config/waybar).
+#   description: One line shown in the menu.
+#   ...: Options:
+#       --block <id>         The block installing the program it configures:
+#                            the config is offered when that block runs.
+#       --needs <id>         A block without which this config would break
+#                            (it runs that block's commands), added with it.
+#                            Can be repeated.
+#       --needs-config <id>  A config without which this one would break (it
+#                            uses that config's files), added with it. Can
+#                            be repeated.
+#       --then <function>    Runs once it is linked (e.g. installs plugins).
+config() {
+    local id="$1"
+    if [ -n "${CONFIG_SOURCE[$id]}" ]; then
+        log_error "Config declared twice: $id"
+        exit 1
+    fi
+
+    CONFIG_IDS+=("$id")
+    CONFIG_SOURCE[$id]="$2"
+    CONFIG_TARGET[$id]="$3"
+    CONFIG_DESCRIPTION[$id]="$4"
+    shift 4
+
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --block) CONFIG_BLOCK[$id]="$2"; shift ;;
+            --needs) CONFIG_NEEDS[$id]+="$2 "; shift ;;
+            --needs-config) CONFIG_NEEDS_CONFIG[$id]+="$2 "; shift ;;
+            --then) CONFIG_THEN[$id]="$2"; shift ;;
+            *) log_error "Unknown option for config $id: $1"; exit 1 ;;
+        esac
+        shift
+    done
+}
+
+# Prints the choice folders of a config (its variants), relative to the
+# repository.
+#
+# Args:
+#   id: The config id.
+config_choices() {
+    local source="$SETUP_DIR/${CONFIG_SOURCE[$1]}"
+    if [ ! -d "$source" ]; then
+        return 0
+    fi
+
+    local marker
+    while IFS= read -r marker; do
+        marker="${marker%/.choice}"
+        echo "${marker#"$SETUP_DIR"/}"
+    done < <(find "$source" -name .choice | sort)
+}
+
+# Deploys a config: links the variant to use for each of its choices, links
+# the config into the home folder (an existing one is kept as .bak), then
+# runs its --then function.
+#
+# Args:
+#   id: The config id.
+deploy_config() {
+    local id="$1"
+    local folder variant file name
+    while IFS= read -r folder; do
+        variant=$(choice_variant "$folder")
+        for file in "$SETUP_DIR/$folder"/*; do
+            name="${file##*/}"
+            if [ -f "$file" ] && [ ! -L "$file" ] && [ "${name%.*}" = "$variant" ]; then
+                log_info "Using the $variant variant of ${folder#.config/}"
+                _link_variant "$SETUP_DIR/$folder" "$name"
+            fi
+        done
+    done < <(config_choices "$id")
+
+    link_config "$SETUP_DIR/${CONFIG_SOURCE[$id]}" "$HOME/${CONFIG_TARGET[$id]}"
+
+    if [ -n "${CONFIG_THEN[$id]}" ]; then
+        "${CONFIG_THEN[$id]}"
+    fi
+}
+
+# Deploys a config behind the spinner.
+#
+# Args:
+#   id: The config id.
+run_config() {
+    run_task "Config $1: ${CONFIG_DESCRIPTION[$1]}" deploy_config "$1"
 }

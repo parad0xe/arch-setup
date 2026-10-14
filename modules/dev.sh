@@ -65,9 +65,7 @@ _setup_rust() {
 
 # Installs Neovim with the tools its config runs: lazygit (<space>lg),
 # ripgrep (Telescope live grep), tree-sitter-cli (Treesitter parsers) and
-# unzip (Mason packages), links its config, then installs vim-plug and the
-# plugins. Mason installs the language servers and linters with Python and
-# npm.
+# unzip (Mason packages).
 _setup_neovim() {
     local pkgs=(
         "neovim"
@@ -81,25 +79,32 @@ _setup_neovim() {
     for pkg in "${pkgs[@]}"; do
         install_pkg "$pkg"
     done
+}
 
-    log_info "Linking Neovim config..."
-    link_config "$SETUP_DIR/.config/nvim" "$HOME/.config/nvim"
-
+# Downloads vim-plug and installs the plugins of the Neovim config. Mason
+# then installs its language servers and linters with pip (Python) and npm
+# (Node.js).
+_install_nvim_plugins() {
     log_info "Downloading vim-plug for Neovim..."
     local data_dir="${XDG_DATA_HOME:-$HOME/.local/share}"
     curl -fLo "$data_dir/nvim/site/autoload/plug.vim" --create-dirs \
         "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
 
+    # Headless: Neovim runs without its interface, its output goes to
+    # /tmp/setup.log
     log_info "Running PlugInstall for Neovim..."
-    nvim +PlugInstall +qall > /dev/null 2>&1
+    nvim --headless +PlugInstall +qall
 }
 
 block python _setup_python "Python via pyenv, uv, pyright, flake8, mypy"
 block node   _setup_node   "nvm and the latest Node.js"
 block rust   _setup_rust   "Rust toolchain via rustup"
 
-# Mason installs the language servers and linters of the config with pip
-# (Python) and npm (Node.js)
-block neovim _setup_neovim "Neovim with its config, plugins and the tools they run" \
+block neovim _setup_neovim "Neovim and the tools its config runs"
+
+# Mason installs its language servers and linters with pip (Python) and npm
+# (Node.js)
+config nvim .config/nvim .config/nvim "Neovim: plugins (vim-plug), LSP, linters, formatters" --block neovim \
     --needs python \
-    --needs node
+    --needs node \
+    --then _install_nvim_plugins

@@ -2,14 +2,17 @@
 
 module "Personal settings"
 
-# Links the SSH config, whose machine-specific hosts and keys go in
-# ~/.ssh/config.d/ (not versioned), then generates an SSH ed25519 or
-# ed25519-sk (FIDO2 security key) key, asking for its email.
+# Generates an SSH ed25519 or ed25519-sk (FIDO2 security key) key, asking
+# for its email.
 _setup_ssh() {
+    if ! confirm "Do you want to configure SSH?"; then
+        log_info "Skipping SSH configuration."
+        return 0
+    fi
+
     local ssh_dir="$HOME/.ssh"
-    mkdir -p -m 700 "$ssh_dir" "$ssh_dir/config.d"
+    mkdir -p -m 700 "$ssh_dir"
     chmod 700 "$ssh_dir"
-    link_config "$SETUP_DIR/.config/ssh/config" "$ssh_dir/config"
 
     local ssh_email=""
     while [ -z "$ssh_email" ]; do
@@ -78,6 +81,11 @@ _setup_ssh() {
 # Configures the global Git name and email, asked for, and main as the
 # default branch.
 _setup_git() {
+    if ! confirm "Do you want to configure Git?"; then
+        log_info "Skipping Git configuration."
+        return 0
+    fi
+
     local git_user=""
     local git_email=""
 
@@ -100,6 +108,11 @@ _setup_git() {
 # Asks for the system timezone (default: the current one) and enables NTP
 # synchronization.
 _setup_time() {
+    if ! confirm "Do you want to configure System Timezone?"; then
+        log_info "Skipping Timezone configuration."
+        return 0
+    fi
+
     local current
     current=$(timedatectl show -p Timezone --value)
 
@@ -121,6 +134,17 @@ _setup_time() {
     sudo hwclock --systohc
 }
 
-block ssh      _setup_ssh  "SSH config and key (standard or FIDO2 security key)" --interactive
+# Creates ~/.ssh/config.d, where the machine-specific hosts and keys go (not
+# versioned, included by the SSH config), and keeps ~/.ssh private.
+_create_ssh_config_d() {
+    mkdir -p -m 700 "$HOME/.ssh/config.d"
+    chmod 700 "$HOME/.ssh"
+}
+
+block ssh      _setup_ssh  "SSH key (standard or FIDO2 security key)" --interactive
 block git      _setup_git  "Git name, email and default branch" --interactive
 block timezone _setup_time "System timezone and NTP synchronization" --interactive
+
+# openssh comes with the base packages
+config ssh .config/ssh/config .ssh/config "SSH client: agent, keys (hosts in ~/.ssh/config.d)" --block system.base \
+    --then _create_ssh_config_d
