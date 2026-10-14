@@ -1,0 +1,103 @@
+{
+    "layer": "top",
+    "position": "top",
+    "margin-top": 10,
+    "margin-left": 20,
+    "margin-right": 20,
+    "height": 34,
+    "spacing": 4,
+    "modules-left": ["hyprland/workspaces", "hyprland/window"],
+    "modules-center": ["clock"],
+    "modules-right": ["cpu", "pulseaudio", "custom/brightness", "battery", "network", "bluetooth", "custom/laptop-kb", "custom/shutdown"],
+
+    "hyprland/workspaces": {
+        "disable-scroll": true,
+        "all-outputs": true,
+	"format": "{name}",
+	"persistent-workspaces": {
+            "1": [],
+            "2": [],
+            "3": [],
+            "4": [],
+            "5": []
+        }
+    },
+    "hyprland/window": {
+        "format": "{title}",
+        "max-length": 50,
+        "separate-outputs": true,
+		"icon": false,
+        "rewrite": {
+			"^$": "",
+            "(.*) - Brave": "Brave",
+            "(.*) - Mozilla Firefox": "Firefox",
+            "(.*) - Discord": "Discord",
+            "ghostty": "Terminal",
+            "(.*) - YouTube(.*)": "YouTube"
+        }
+    },
+	"cpu": {
+		"interval": 5,
+		"format": "  {usage}%",
+		"max-length": 10,
+		"on-click": "ghostty -e btop"
+	},
+    "clock": {
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
+        "spacing": 10
+    },
+    "pulseaudio": {
+        "format": "{volume}% {icon}",
+        "format-bluetooth": "{volume}% {icon}",
+        "format-muted": " Muted",
+        "format-icons": {
+            "default": ["", ""]
+        },
+        "on-click": "pavucontrol"
+    },
+    "custom/brightness": {
+        "format": "󰃟",
+        "on-click": "~/.config/hypr/scripts/brightness-menu.sh",
+        "tooltip": true,
+        "tooltip-format": "Click to adjust monitor brightness"
+    },
+    "battery": {
+        "interval": 5,
+        "states": {
+            "warning": 20,
+            "critical": 10
+        },
+        "format": "{icon}  {capacity}%",
+        "format-charging": "󰂄  {capacity}%",
+        "format-plugged": "  {capacity}%",
+        "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
+    },
+    "network": {
+        "format-wifi": "{essid} ({signalStrength}%) ",
+        "format-ethernet": "{ipaddr}/{cidr} 󰈀",
+        "format-disconnected": "Disconnected ⚠",
+        "on-click": "~/.config/hypr/scripts/system/wifi.sh"
+    },
+    "bluetooth": {
+        "format": " {status}",
+        "format-connected": " {device_alias}",
+        "format-connected-battery": " {device_alias} {device_battery_percentage}%",
+        "on-click": "blueman-manager"
+    },
+    "tray": {
+        "spacing": 10
+    },
+    "custom/laptop-kb": {
+        "exec": "~/.config/hypr/scripts/toggle-laptop-kb.sh",
+        "return-type": "json",
+        "interval": 3600,
+        "signal": 8,
+        "on-click": "~/.config/hypr/scripts/toggle-laptop-kb.sh toggle",
+        "tooltip": true
+    },
+    "custom/shutdown": {
+        "format": " 󰐥 ",
+        "on-click": "wlogout",
+        "tooltip": false
+    }
+}

@@ -5,3 +5,4 @@ config *
 
 choice .config/hypr/conf/keybinds vim
 choice .config/hypr/conf/keyboard vim
+choice .config/waybar default

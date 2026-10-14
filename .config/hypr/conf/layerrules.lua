@@ -11,3 +11,12 @@ hl.layer_rule({
     blur         = true,
     ignore_alpha = 0,
 })
+
+-- Blurs only the pills (the bar between them is transparent), for the glass
+-- Waybar theme
+hl.layer_rule({
+    name         = "waybar_blur",
+    match        = { namespace = "waybar" },
+    blur         = true,
+    ignore_alpha = 0.2,
+})

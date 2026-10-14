@@ -1,0 +1,241 @@
+/* ==========================================
+   WAYBAR — Glass
+   Frosted translucent pills over the wallpaper,
+   blurred by Hyprland (waybar_blur layer rule)
+   ========================================== */
+
+* {
+    border: none;
+    border-radius: 0;
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 13px;
+    font-weight: 500;
+    min-height: 0;
+}
+
+/* ── Bar ─────────────────────────────────── */
+window#waybar {
+    background-color: transparent;
+}
+
+/* ── Empty window title ──────────────────── */
+#window.empty,
+window#waybar.empty #window {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+}
+#window.empty label {
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* ── Pill base ───────────────────────────── */
+.modules-left > widget > *,
+.modules-center > widget > *,
+.modules-right > widget > * {
+    background-color: rgba(18, 12, 32, 0.30);
+    background-image: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.14),
+        rgba(255, 255, 255, 0.03)
+    );
+    color: #f2ebff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    border-radius: 16px;
+    padding: 2px 14px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    margin-right: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-top-color: rgba(255, 255, 255, 0.32);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.10),
+        0 2px 6px rgba(0, 0, 0, 0.18);
+    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.modules-left > widget > *:hover,
+.modules-center > widget > *:hover,
+.modules-right > widget > *:hover {
+    background-color: rgba(40, 28, 70, 0.38);
+    border-color: rgba(255, 255, 255, 0.28);
+    border-top-color: rgba(255, 255, 255, 0.45);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.16),
+        0 0 10px rgba(190, 150, 255, 0.25);
+}
+
+.modules-right > widget:last-child > * {
+    margin-right: 0;
+}
+
+/* ── Workspaces ──────────────────────────── */
+#workspaces {
+    padding: 2px 6px;
+}
+
+#workspaces button {
+    color: rgba(240, 232, 255, 0.55);
+    padding: 0 9px;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+}
+
+#workspaces button:hover {
+    background: rgba(255, 255, 255, 0.10);
+    box-shadow: none;
+    color: #ffffff;
+}
+
+#workspaces button.active {
+    background-color: rgba(255, 255, 255, 0.18);
+    background-image: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.20),
+        rgba(255, 255, 255, 0.05)
+    );
+    color: #ffffff;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.35),
+        0 0 8px rgba(200, 170, 255, 0.35);
+}
+
+#workspaces button.urgent {
+    background: rgba(255, 90, 140, 0.35);
+    color: #ffe0ea;
+}
+
+/* ── Window title ────────────────────────── */
+#window {
+    color: rgba(240, 232, 255, 0.80);
+    font-style: italic;
+    letter-spacing: 0.04em;
+    font-size: 12px;
+}
+
+/* ── Clock ───────────────────────────────── */
+#clock {
+    color: #ffffff;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    font-size: 13px;
+}
+
+/* ── CPU ─────────────────────────────────── */
+#cpu {
+    color: #e0ccff;
+}
+
+/* ── Audio ───────────────────────────────── */
+#pulseaudio {
+    color: #d8c8ff;
+}
+
+#pulseaudio.muted {
+    color: rgba(240, 232, 255, 0.40);
+}
+
+/* ── Network ─────────────────────────────── */
+#network {
+    color: #d0c0f8;
+}
+
+#network.disconnected {
+    color: #ffb0c8;
+}
+
+/* ── Bluetooth ───────────────────────────── */
+#bluetooth {
+    color: #cbb8f0;
+}
+
+#bluetooth.connected {
+    color: #ffffff;
+}
+
+/* ── Battery ─────────────────────────────── */
+#battery {
+    color: #f2ebff;
+}
+
+#battery.charging,
+#battery.plugged {
+    color: #e4d4ff;
+}
+
+#battery.warning:not(.charging) {
+    color: #ffd0a0;
+}
+
+#battery.critical:not(.charging) {
+    color: #ff7090;
+    animation-name: blink;
+    animation-duration: 0.8s;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+
+@keyframes blink {
+    from { opacity: 1; }
+    to   { opacity: 0.3; }
+}
+
+/* ── Brightness ──────────────────────────── */
+#custom-brightness {
+    color: #e6dcff;
+}
+
+/* ── Laptop keyboard toggle ──────────────── */
+#custom-laptop-kb.enabled {
+    color: #d8c8ff;
+}
+
+#custom-laptop-kb.disabled,
+#custom-laptop-kb.unavailable {
+    color: rgba(240, 232, 255, 0.40);
+}
+
+#custom-laptop-kb.disabled:hover {
+    color: #ffb0c8;
+}
+
+/* ── Tray ────────────────────────────────── */
+#tray {
+    padding: 0 10px;
+}
+
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+    background-color: rgba(255, 90, 140, 0.35);
+    border-radius: 8px;
+}
+
+/* ── Shutdown ────────────────────────────── */
+#custom-shutdown {
+    color: #e8d4ff;
+    padding: 2px 14px;
+    font-size: 15px;
+    transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#custom-shutdown:hover {
+    color: #ffffff;
+    background-color: rgba(255, 90, 140, 0.30);
+    border-color: rgba(255, 160, 200, 0.45);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.20),
+        0 0 12px rgba(255, 90, 140, 0.35);
+}
