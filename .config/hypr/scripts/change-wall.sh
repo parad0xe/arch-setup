@@ -98,7 +98,7 @@ _apply_all_desktop() {
 #
 # Args:
 #   src: The source image or mp4 file.
-#   type: desktop, lock or login (default: desktop).
+#   type: desktop, lock, login or all of them (default: desktop).
 #   monitor: Monitor name for a desktop wallpaper, or all (default: all).
 _update_wallpaper() {
     local src="$1"
@@ -143,6 +143,11 @@ _update_wallpaper() {
             local login_target="/usr/share/sddm/themes/tokyo-night-sddm/background.jpg"
             pkexec cp "$process_src" "$login_target"
             notify-send "Wallpaper" "Login screen background updated"
+            ;;
+        "all")
+            _update_wallpaper "$src" desktop all
+            _update_wallpaper "$src" lock
+            _update_wallpaper "$src" login
             ;;
     esac
 }

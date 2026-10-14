@@ -117,8 +117,9 @@ _choose_folder() {
     esac
 }
 
-# Asks where to apply the wallpaper. Monitors are only listed when more than
-# one is connected. Echoes "<type> <monitor>", or nothing if cancelled.
+# Asks where to apply the wallpaper: the desktop, the lock screen, the login
+# screen or all of them. Monitors are only listed when more than one is
+# connected. Echoes "<type> <monitor>", or nothing if cancelled.
 _choose_target() {
     local monitors
     monitors=$(hyprctl monitors | awk '/^Monitor/ {print $2}')
@@ -130,7 +131,7 @@ _choose_target() {
             entries+="\nDesktop: $m"
         done
     fi
-    entries+="\nLock screen\nLogin screen"
+    entries+="\nLock screen\nLogin screen\nAll (desktop, lock and login screens)"
 
     local target
     target=$(echo -e "$entries" | _text_menu "Apply to")
@@ -140,6 +141,7 @@ _choose_target() {
         "Desktop: "*) echo "desktop ${target#Desktop: }" ;;
         "Lock screen") echo "lock all" ;;
         "Login screen") echo "login all" ;;
+        "All (desktop, lock and login screens)") echo "all all" ;;
     esac
 }
 
