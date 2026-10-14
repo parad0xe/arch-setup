@@ -5,15 +5,16 @@ the installation and configuration of a complete Arch Linux environment.
 
 ## Features
 
-* Blocks and Profiles: Pick a profile, then select the blocks to install in
-  a menu and check the summary of what will run; the blocks they need are
-  added and run in dependency order.
+* Blocks and Profiles: Pick a profile, select the blocks to install and the
+  configs to deploy in menus, and check the summary of what will run; the
+  blocks and configs they need are added and run in dependency order.
+* Optional Configs: The configs of this repository are deployed only when
+  selected, with their variants (keybindings, keyboard layout) picked in the
+  menu.
 * NVIDIA Optimized: Automatic driver installation and DRM configuration
   when an NVIDIA GPU is detected.
 * ARM Support: Runs on Arch Linux ARM (aarch64, e.g. Asahi Linux on Apple
   Silicon); see the notes for the differences.
-* Dotfiles Management: Each block links the configs of what it installs
-  into ~/.config.
 * Complete Environment: Hyprland, Waybar, ZSH, PipeWire, and Bluetooth.
 
 ## Project Structure
@@ -21,80 +22,99 @@ the installation and configuration of a complete Arch Linux environment.
 * setup.sh: Main orchestrator (menus, profiles, dependencies) and global
   variables.
 * bootstrap.sh: Entry script to clone the repo into ~/.dotfiles.
-* modules/core.sh: Shared helpers and the block framework.
+* modules/core.sh: Shared helpers and the block and config framework.
 * modules/: One file per theme (system, hardware, desktop, terminal, app,
-  dev, virtualization, config, wallpapers), declaring its blocks.
-* profiles/: Ready-made selections of blocks and config variants.
+  dev, virtualization, settings, wallpapers), declaring its blocks and
+  configs.
+* profiles/: Ready-made selections of blocks, configs and config variants.
 * .config/: Configurations for Hyprland, Waybar, Mako, Ghostty, etc.
 
-## Blocks and Profiles
+## Blocks, Configs and Profiles
 
-Each step of the setup is a block, declared by its module:
+The setup runs in three menus, then a summary:
 
-* An element has a short id (`desktop`, `shell`, `neovim`, `python`...); its
-  components are named after it (`desktop.sddm`, `desktop.tools`...). The
-  `app.*` blocks group the graphical applications.
-* The menu offers the elements and their optional components. A component
-  its element needs (e.g. `desktop.hypr-tools`) is installed with it; the
-  `system` blocks (update, base packages, yay) always run first.
-* A block declares the blocks without which its config would break
-  (`--needs`, e.g. `desktop` needs `app.ghostty` for its terminal
-  keybinding): they are added to the selection and run before it. Blocks
-  that do not apply to the machine (NVIDIA without an NVIDIA GPU, x86_64-only
-  apps on ARM, QEMU inside a VM...) are not offered.
+1. Blocks: what to install. Each step of the setup is a block, declared by
+   its module. An element has a short id (`desktop`, `shell`, `neovim`,
+   `python`...); its components are named after it (`desktop.sddm`,
+   `desktop.tools`...), and the `app.*` blocks group the graphical
+   applications. The `system` blocks (update, base packages, yay) always run
+   first, and the blocks that do not apply to the machine (NVIDIA without an
+   NVIDIA GPU, x86_64-only apps on ARM, QEMU inside a VM...) are not offered.
+2. Configs: which configs of this repository to deploy, among the ones of
+   the programs that will be installed (e.g. `hypr` when `desktop` is
+   selected). Under a config, its variants (e.g. the keybindings of `hypr`)
+   show their value; `←`/`→` change it.
+3. Summary: every block that will run, in run order, then every config
+   deployed after the blocks, with why the ones not selected are there
+   (always run, needed by a block or a config).
 
-The menu shows the blocks by module. A module with an element named after
-it (`desktop`, `wallpapers`) shows that element with its components under
-it; the other modules (`app`, `dev`, `hardware`...) get a section line whose
-checkbox tells whether all (`[x]`), some (`[-]`) or none (`[ ]`) of their
-blocks are selected. Names are shown without the prefix of their section or
-element (`sddm` under `desktop`, `ghostty` under `app`).
+A block or a config declares what it needs (`--needs`): the blocks or
+configs without which it would break, added to the selection and run before
+it. The dependencies of a config live on the config, not on the block of its
+program: Hyprland alone needs no browser, but the `hypr` config needs
+`app.brave` for its `Super + W` keybinding, so installing `desktop` without
+the `hypr` config installs no browser.
 
-`Tab` selects or unselects a block, or all the blocks of a section, and
-`Enter` shows the summary: every block that will run, in run order, with
-why the ones not selected are there (always run, needed by another block).
-`Enter` installs them, `Esc` goes back to the selection, and `s` saves the
-selection as a new profile: it asks for its name, its description and the
-variant of each config choice, then writes
+The blocks menu shows the blocks by module. A module with an element named
+after it (`desktop`, `wallpapers`) shows that element with its components
+under it; the other modules (`app`, `dev`, `hardware`...) get a section line
+whose checkbox tells whether all (`[x]`), some (`[-]`) or none (`[ ]`) of
+their blocks are selected. Names are shown without the prefix of their
+section or element (`sddm` under `desktop`, `ghostty` under `app`).
+
+In the menus, `Tab` selects or unselects a line (a whole section in the
+blocks menu), `Enter` goes to the next step and `Esc` goes back. In the
+summary, `Enter` installs everything, and `s` saves the selection as a new
+profile: it asks for its name and description, then writes
 `~/.local/share/arch-setup/profiles/<name>.profile`, outside the repository,
-with the selected blocks (the required blocks and the ones they need come
-back on their own).
+with the selected blocks and configs and the variants (the required blocks
+and the ones they need come back on their own). Once the summary is
+validated, the install asks only the questions of the selected modules
+(SSH email, Git name, timezone, default wallpapers...).
 
 `./setup.sh --list` shows every block by module, whether it is offered on
-the machine, and the profiles.
+the machine, the configs and the profiles.
 
 A profile is a file in `profiles/` (the repository's ones) or in
 `~/.local/share/arch-setup/profiles/` (your own ones, which take precedence
 over a repository profile of the same name): its first comment line is the
-description shown in the menu, `block` lines select the matching blocks (shell
-patterns), and `choice` lines set a config variant instead of asking for it:
+description shown in the menu, `block` and `config` lines select the
+matching blocks and configs (shell patterns), and `choice` lines set a
+config variant:
 
 ```txt
 # Hyprland desktop and shell, without dev tools, VMs or optional apps
 block desktop*
 block shell
+config *
 choice .config/hypr/conf/keybinds default
 ```
 
 To add a block, write its function in the module of its theme, with a
 comment above it (shown in the menu preview), and declare it at the end of
-the file, the element before its components:
+the file, the element before its components. A config is declared next to
+the block of its program:
 
 ```bash
-block neovim _setup_neovim "Neovim with its config and plugins" \
+block neovim _setup_neovim "Neovim and the tools its config runs"
+
+config nvim .config/nvim .config/nvim "Neovim: plugins, LSP, linters" --block neovim \
     --needs python \
-    --needs node
+    --needs node \
+    --then _install_nvim_plugins
 ```
 
-The options of `block` are described in `modules/core.sh`. A new module file
-starts with `module "<description>"`, its heading in the menu.
+The options of `block` and `config` are described in `modules/core.sh`. A
+new module file starts with `module "<description>"`, its heading in the
+menu. The variants of a config are the folders of its files holding a
+`.choice` file (its description) and one file per variant.
 
 ## Configuration
 
 Nothing needs to be edited before launching: the setup asks for your
-personal settings (SSH key email, Git name and email, timezone) and lets you
-choose between config variants (keybindings, keyboard layout), unless the
-profile sets them.
+personal settings (SSH key email, Git name and email, timezone) during the
+install, and the config variants (keybindings, keyboard layout) are picked
+in the configs menu or set by the profile.
 
 Machine-specific SSH settings (hosts, extra keys) go in `~/.ssh/config.d/`,
 which is included by the versioned SSH config but never versioned itself.
@@ -123,9 +143,11 @@ cd ~/.dotfiles
 ```txt
 Usage: ./setup.sh [options]
 
-Without -b or -m, asks for a profile, then for the blocks to run with the
-profile's ones selected, and shows what will run before installing it. The
-blocks they need are added, and every block runs after the ones it needs.
+Without -b, -m or -c, asks for a profile, then for the blocks to run and the
+configs to deploy (the profile's ones selected), and shows what will run
+before installing it. The blocks and configs they need are added, every
+block runs after the ones it needs, and the configs are deployed after the
+blocks.
 
 Options:
   -p, --profile <name>   Use this profile instead of asking for one (from
@@ -136,14 +158,18 @@ Options:
                          repeated
   -m, --module <name>    Same for the blocks of modules/<name>.sh; can be
                          repeated
+  -c, --config <pattern> Deploy the matching configs, with the blocks and
+                         configs they need, without the menus (e.g. hypr);
+                         can be repeated
   -r, --resume <block>   Skip the blocks that run before this one
-  -l, --list             List the blocks and the profiles
+  -l, --list             List the blocks, the configs and the profiles
   -h, --help             Show this help message
 
 Examples:
   ./setup.sh -p desktop
   ./setup.sh -m wallpapers
   ./setup.sh -b neovim -b "app.*"
+  ./setup.sh -c hypr -c waybar
   ./setup.sh -p full --resume shell
 ```
 
