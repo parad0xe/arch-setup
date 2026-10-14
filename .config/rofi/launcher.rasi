@@ -1,0 +1,70 @@
+/* ==========================================
+ * ROFI THEME - APPLICATION LAUNCHER (Catppuccin)
+ * ========================================== */
+
+* {
+    bg: rgba(30, 30, 46, 90%);
+    bg-alt: #313244;
+    fg: #cdd6f4;
+    accent: #89b4fa;
+    border-col: #b4befe;
+
+    background-color: transparent;
+    text-color: @fg;
+    font: "JetBrainsMono Nerd Font 11";
+}
+
+window {
+    width: 50%;
+    background-color: @bg;
+    border: 2px solid;
+    border-color: @border-col;
+    border-radius: 10px;
+    location: center;
+}
+
+mainbox {
+    padding: 5px;
+    children: [inputbar, listview];
+}
+
+inputbar {
+    margin: 15px;
+    padding: 10px 15px;
+    background-color: @bg-alt;
+    border-radius: 8px;
+    children: [entry];
+}
+
+entry {
+    placeholder: "Search...";
+    placeholder-color: #6c7086;
+    cursor: text;
+}
+
+listview {
+    lines: 8;
+    scrollbar: false;
+    margin: 0px 0px 10px 0px;
+}
+
+element {
+    padding: 8px;
+    margin: 0px 10px 5px 10px;
+    border-radius: 8px;
+    spacing: 10px;
+}
+
+element selected {
+    background-color: @accent;
+    text-color: #1e1e2e;
+}
+
+element-icon {
+    size: 1.2em;
+}
+
+element-text {
+    vertical-align: 0.5;
+    text-color: inherit;
+}

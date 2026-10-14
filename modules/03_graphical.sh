@@ -6,7 +6,6 @@ _install_wayland_stack() {
         "hyprland"
         "waybar"
         "sddm"
-        "wofi"
         "mako"
         "ttf-jetbrains-mono-nerd"
         "polkit-kde-agent"

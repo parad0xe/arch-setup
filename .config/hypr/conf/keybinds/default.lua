@@ -12,9 +12,9 @@ hl.bind(mainMod .. " + E",      hl.dsp.exec_cmd("thunar"))
 hl.bind(mainMod .. " + L",      hl.dsp.exec_cmd("hyprlock"))
 hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd("~/.config/hypr/scripts/logout.sh"))
 hl.bind("CTRL + Space",         hl.dsp.exec_cmd("~/.config/hypr/scripts/wall-selector.sh"))
-hl.bind("CTRL + SHIFT + Space", hl.dsp.exec_cmd("wofi --show drun --no-actions"))
-hl.bind(mainMod .. " + Space",  hl.dsp.exec_cmd("wofi --show drun --no-actions"))
-hl.bind(mainMod .. " + P",      hl.dsp.exec_cmd("wofi --show run"))
+hl.bind("CTRL + SHIFT + Space", hl.dsp.exec_cmd("rofi -show drun -show-icons -theme ~/.config/rofi/launcher.rasi"))
+hl.bind(mainMod .. " + Space",  hl.dsp.exec_cmd("rofi -show drun -show-icons -theme ~/.config/rofi/launcher.rasi"))
+hl.bind(mainMod .. " + P",      hl.dsp.exec_cmd("rofi -show run -theme ~/.config/rofi/launcher.rasi"))
 
 -- --- WINDOW MANAGEMENT ---
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
