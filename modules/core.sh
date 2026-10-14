@@ -331,6 +331,16 @@ declare -ga BLOCK_IDS=()
 declare -gA BLOCK_FUNCTION=() BLOCK_DESCRIPTION=() BLOCK_SOURCE=()
 declare -gA BLOCK_REQUIRED=() BLOCK_INTERACTIVE=() BLOCK_IF=() BLOCK_UNLESS=()
 declare -gA BLOCK_NEEDS=() BLOCK_AFTER=()
+declare -gA MODULE_DESCRIPTION=()
+
+# Describes the module calling it (modules/<name>.sh), shown as the heading
+# of its blocks in the menu.
+#
+# Args:
+#   description: What the module installs.
+module() {
+    MODULE_DESCRIPTION[$(basename "${BASH_SOURCE[1]}" .sh)]="$1"
+}
 
 # Declares a block of the setup.
 #

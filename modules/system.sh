@@ -1,5 +1,7 @@
 #!/bin/bash
 
+module "Base system"
+
 # Enables the multilib repository in the pacman configuration.
 _enable_multilib() {
     local conf="/etc/pacman.conf"

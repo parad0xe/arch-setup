@@ -1,5 +1,7 @@
 #!/bin/bash
 
+module "Shell and terminal tools"
+
 # Installs Zsh with Oh My Zsh, its plugins (autosuggestions, syntax
 # highlighting), the Starship prompt and the tools the zshrc runs (eza, bat,
 # zoxide, fzf, fastfetch), and links the zshrc, Starship and fastfetch

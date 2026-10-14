@@ -1,5 +1,7 @@
 #!/bin/bash
 
+module "Personal settings"
+
 # Links the SSH config, whose machine-specific hosts and keys go in
 # ~/.ssh/config.d/ (not versioned), then generates an SSH ed25519 or
 # ed25519-sk (FIDO2 security key) key, asking for its email.

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+module "Wallpapers"
+
 # Clones a wallpapers repository and copies the formats the wallpaper
 # selector shows into ~/Pictures/wallpapers, keeping its sub-folders.
 #

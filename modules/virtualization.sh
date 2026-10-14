@@ -1,5 +1,7 @@
 #!/bin/bash
 
+module "Virtual machines"
+
 # Returns success when this machine can host VMs: not inside a VM, and not
 # on ARM (no UEFI firmware package for ARM VMs).
 _can_host_vms() {

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+module "Hardware services"
+
 # Installs NetworkManager (nmcli) and enables the service.
 _setup_network() {
     log_info "Installing NetworkManager..."

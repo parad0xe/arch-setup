@@ -1,5 +1,7 @@
 #!/bin/bash
 
+module "Graphical applications"
+
 # Builds Ghostty from the AUR (ghostty-git) on ARM, where it is not packaged.
 # Its PKGBUILD is fixed first:
 #   - zig 0.16 extracts the fetched packages into zig-pkg/ in the sources

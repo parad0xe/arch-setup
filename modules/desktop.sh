@@ -1,5 +1,7 @@
 #!/bin/bash
 
+module "Hyprland desktop"
+
 # Installs Hyprland with its bar (Waybar), notifications (mako), polkit
 # agent, Qt Wayland support, socat (monitor hotplug script) and btop (opened
 # from Waybar), and links the Hyprland, Waybar and mako configs.

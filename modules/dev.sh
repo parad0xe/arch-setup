@@ -1,5 +1,7 @@
 #!/bin/bash
 
+module "Development tools"
+
 # Installs pyenv with tk (for Python's tkinter; the other libraries it
 # builds Python with come with the base system), the latest stable Python as
 # the global version, uv, and the pyright, flake8 and mypy tools.
