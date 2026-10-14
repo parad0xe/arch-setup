@@ -171,12 +171,6 @@ _setup_dotfiles() {
 
     local starship="$repo/.config/starship/nerd-font-symbols.toml"
     link_config "$starship" "$conf_dir/starship.toml"
-
-    log_info "Deploying wallpapers..."
-    local wall_dir="$repo/.assets/wallpapers/"
-    mkdir -p ~/Pictures/wallpapers/.active/
-    cp $wall_dir/default/* "$HOME/Pictures/wallpapers"
-    cp $wall_dir/active/* "$HOME/Pictures/wallpapers/.active"
 }
 
 # Entry point for the configuration module.

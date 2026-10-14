@@ -29,6 +29,12 @@ choose between config variants (e.g. keybindings, keyboard layout).
 Machine-specific SSH settings (hosts, extra keys) go in `~/.ssh/config.d/`,
 which is included by the versioned SSH config but never versioned itself.
 
+Wallpapers are not stored in this repository: the setup clones a wallpapers
+repository (asked at setup, `CFG_WALLPAPERS_REPO` in `setup.sh` by default)
+and copies its images and videos (jpg, jpeg, png, webp, mp4) into
+`~/Pictures/wallpapers`. Run `./setup.sh -m wallpapers` to deploy them again.
+No wallpaper is applied until you pick one with the selector (`CTRL + Space`).
+
 ## Installation
 
 On a fresh Arch Linux installation, run the following command:
