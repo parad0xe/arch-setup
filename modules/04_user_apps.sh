@@ -34,6 +34,33 @@ _build_ghostty_git() {
     rm -rf "$build_dir"
 }
 
+# Builds rofi 2 from the Arch Linux PKGBUILD on ARM, whose repositories stop
+# at rofi 1.7.5. That version only supports X11: Hyprland shows it through
+# XWayland, which squashes and blurs it on a scaled screen.
+_build_rofi() {
+    local installed
+    installed=$(pacman -Q rofi 2>/dev/null | cut -d ' ' -f 2)
+    if [ -n "$installed" ] && [ "$(vercmp "$installed" 2)" -ge 0 ]; then
+        log_warn "rofi $installed is already installed."
+        return
+    fi
+
+    # Provides pandoc, a build dependency missing from the ARM repositories
+    install_aur_pkg "pandoc-bin"
+
+    local build_dir="$HOME/.cache/rofi-build"
+    rm -rf "$build_dir"
+
+    git clone https://gitlab.archlinux.org/archlinux/packaging/packages/rofi.git "$build_dir"
+    cd "$build_dir" || exit
+
+    # The PKGBUILD only lists x86_64, but rofi builds on ARM as well
+    makepkg -si --noconfirm --ignorearch
+
+    cd "$HOME" || exit
+    rm -rf "$build_dir"
+}
+
 # Installs essential command-line tools and utilities.
 _install_cli_tools() {
     local tools=(
@@ -48,7 +75,6 @@ _install_cli_tools() {
 		"satty"
 		"playerctl"
 		"libnotify"
-		"rofi"
 		"ffmpegthumbnailer"
 		"awww"
 		"brightnessctl"
@@ -63,6 +89,13 @@ _install_cli_tools() {
     for pkg in "${tools[@]}"; do
         install_pkg "$pkg"
     done
+
+    log_info "Installing rofi (launcher and menus)..."
+    if is_arm; then
+        _build_rofi
+    else
+        install_pkg "rofi"
+    fi
 
     log_info "Installing Ghostty terminal..."
     if is_arm; then
