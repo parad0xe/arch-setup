@@ -1,5 +1,5 @@
 -- Loads the variant of a choice picked at setup (its selected.lua link, see
--- choose_variant in modules/core.sh), or its default variant when none was
+-- deploy_config in modules/core.sh), or its default variant when none was
 -- picked.
 local function require_choice(name)
     if package.searchpath(name .. ".selected", package.path) then

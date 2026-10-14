@@ -3,6 +3,6 @@
 user_configuration.json
 user_credentials.json
 
-# Variant links created by choose_variant (modules/core.sh)
+# Variant links created by deploy_config (modules/core.sh)
 selected
 selected.*

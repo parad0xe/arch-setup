@@ -39,6 +39,11 @@ _copy_wallpapers() {
 # default), then copies the formats the wallpaper selector shows into
 # ~/Pictures/wallpapers, keeping the repository's sub-folders.
 _deploy_wallpapers() {
+    if ! confirm "Do you want to deploy wallpapers?"; then
+        log_info "Skipping wallpapers deployment."
+        return 0
+    fi
+
     local repo=""
     printf "\r\033[K\033[1;34m[i]\033[0m Wallpapers repository [%s]: " "$CFG_WALLPAPERS_REPO" > /dev/tty
     read -r repo < /dev/tty
@@ -96,6 +101,11 @@ _choose_default_wallpapers() {
 
     if [ -z "$(find "$wall_dir" -path "$wall_dir/.*" -prune -o -type f -print -quit 2>/dev/null)" ]; then
         log_info "No wallpaper in ${wall_dir/#$HOME/\~}, skipping default wallpapers."
+        return 0
+    fi
+
+    if ! confirm "Do you want to choose the default wallpapers?"; then
+        log_info "Skipping default wallpapers."
         return 0
     fi
 
