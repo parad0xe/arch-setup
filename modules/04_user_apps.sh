@@ -12,26 +12,36 @@ _build_ghostty_git() {
         return
     fi
 
-    # Provides pandoc-cli, a build dependency missing from the ARM repositories
+    log_info "Ghostty is not packaged for ARM, building it from the AUR (ghostty-git)..."
+
+    log_info "Installing pandoc-bin (provides pandoc-cli, needed to build Ghostty)..."
     install_aur_pkg "pandoc-bin"
 
     local build_dir="$HOME/.cache/ghostty-git-build"
     rm -rf "$build_dir"
 
+    log_info "Downloading the ghostty-git PKGBUILD..."
     git clone https://aur.archlinux.org/ghostty-git.git "$build_dir"
     cd "$build_dir" || exit
 
+    log_info "Fixing the PKGBUILD (zig 0.16 package path, terminfo conflict with ncurses)..."
     sed -i 's|"$srcdir/zig-global-cache/p"|"$srcdir/$_pkgbase/zig-pkg"|' PKGBUILD
     sed -i 's|build/usr/share/terminfo/\*|build/usr/share/terminfo/x|' PKGBUILD
+
+    log_info "Building Ghostty, this takes several minutes (output in /tmp/setup.log)..."
     makepkg -s --noconfirm
 
     # Installs the terminal and its dependencies, not the Nautilus extension
+    log_info "Installing ghostty-git, ghostty-shell-integration-git and ghostty-terminfo-git..."
     local pkgs
     mapfile -t pkgs < <(makepkg --packagelist | grep -E '/ghostty-(shell-integration-|terminfo-)?git-[0-9]')
     sudo pacman -U --noconfirm "${pkgs[@]}"
 
+    log_info "Removing the build directory..."
     cd "$HOME" || exit
     rm -rf "$build_dir"
+
+    log_success "Ghostty built and installed."
 }
 
 # Builds rofi 2 from the Arch Linux PKGBUILD on ARM, whose repositories stop
@@ -45,20 +55,27 @@ _build_rofi() {
         return
     fi
 
-    # Provides pandoc, a build dependency missing from the ARM repositories
+    log_info "ARM repositories only have rofi 1.7.5 (X11 only), building rofi 2 from the Arch Linux PKGBUILD..."
+
+    log_info "Installing pandoc-bin (provides pandoc, needed to build rofi)..."
     install_aur_pkg "pandoc-bin"
 
     local build_dir="$HOME/.cache/rofi-build"
     rm -rf "$build_dir"
 
+    log_info "Downloading the rofi PKGBUILD..."
     git clone https://gitlab.archlinux.org/archlinux/packaging/packages/rofi.git "$build_dir"
     cd "$build_dir" || exit
 
     # The PKGBUILD only lists x86_64, but rofi builds on ARM as well
+    log_info "Building rofi, running its tests and installing it (output in /tmp/setup.log)..."
     makepkg -si --noconfirm --ignorearch
 
+    log_info "Removing the build directory..."
     cd "$HOME" || exit
     rm -rf "$build_dir"
+
+    log_success "rofi $(pacman -Q rofi | cut -d ' ' -f 2) built and installed."
 }
 
 # Installs essential command-line tools and utilities.
