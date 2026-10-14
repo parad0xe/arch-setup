@@ -32,8 +32,9 @@ which is included by the versioned SSH config but never versioned itself.
 Wallpapers are not stored in this repository: the setup clones a wallpapers
 repository (asked at setup, `CFG_WALLPAPERS_REPO` in `setup.sh` by default)
 and copies its images and videos (jpg, jpeg, png, webp, mp4) into
-`~/Pictures/wallpapers`, then lets you pick the default desktop, lock screen
-and login screen wallpapers (fzf with an image preview). Run
+`~/Pictures/wallpapers`, then lets you pick the default wallpapers (fzf with
+an image preview): the same one for the desktop, lock and login screens, or
+one each. Run
 `./setup.sh -m wallpapers` to deploy or pick them again; the selector
 (`CTRL + Space`) changes them at any time.
 

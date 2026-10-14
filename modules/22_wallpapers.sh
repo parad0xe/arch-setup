@@ -53,14 +53,16 @@ _install_wallpaper_picker() {
 # a preview of the image, and prints its path (nothing when Esc is pressed).
 #
 # Args:
-#   label: What the wallpaper is for, shown in the prompt.
+#   context: What the wallpaper is for (Desktop, All, Lock), shown as title.
+#   targets: Where it will be applied, shown under the search field.
 #   videos: "videos" to also list the mp4 files.
 _pick_wallpaper() {
-    local label="$1"
+    local context="$1"
+    local targets="$2"
     local wall_dir="$HOME/Pictures/wallpapers"
 
     local types=(-iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp")
-    if [ "$2" = "videos" ]; then
+    if [ "$3" = "videos" ]; then
         types+=(-o -iname "*.mp4")
     fi
 
@@ -70,7 +72,8 @@ _pick_wallpaper() {
         -printf '%p\t%P\n' \
         | sort -t $'\t' -k 2 \
         | fzf --delimiter '\t' --with-nth 2 --layout reverse \
-            --prompt "$label > " \
+            --border rounded --border-label " $context " \
+            --prompt "$context > " --header "Applied to: $targets (Esc to skip)" \
             --preview 'case {1} in
                 *.mp4|*.MP4) echo "Video (no preview)" ;;
                 *) chafa --size "${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}" {1} ;;
@@ -78,9 +81,10 @@ _pick_wallpaper() {
         | cut -f 1
 }
 
-# Asks for the wallpapers applied by default and stores them where the
-# wallpaper selector does: desktop (image or video, on every monitor), lock
-# screen and SDDM login screen (images).
+# Asks for the wallpapers applied by default, the same one everywhere or one
+# per screen, and stores them where the wallpaper selector does: desktop
+# (image or video, on every monitor), lock screen and SDDM login screen
+# (images).
 _choose_default_wallpapers() {
     local wall_dir="$HOME/Pictures/wallpapers"
     local active_dir="$wall_dir/.active"
@@ -101,21 +105,19 @@ _choose_default_wallpapers() {
 
     run_task "Installing Wallpaper Picker..." _install_wallpaper_picker
 
-    local desktop lock="" login=""
-    desktop=$(_pick_wallpaper "Desktop" videos)
+    local same="y"
+    printf "\r\033[K\033[1;34m[i]\033[0m Same wallpaper for the desktop, lock and login screens? (n: one each, needed for a video desktop) [Y/n]: " > /dev/tty
+    read -r same < /dev/tty
 
-    local same="n"
-    if [ -n "$desktop" ] && [[ "${desktop,,}" != *.mp4 ]]; then
-        printf "\r\033[K\033[1;34m[i]\033[0m Use it for the lock and login screens too? [Y/n]: " > /dev/tty
-        read -r same < /dev/tty
-    fi
-
-    if [[ ! "$same" =~ ^[Nn]$ ]]; then
+    local desktop lock login
+    if [[ "$same" =~ ^[Nn]$ ]]; then
+        desktop=$(_pick_wallpaper "Desktop" "desktop" videos)
+        lock=$(_pick_wallpaper "Lock" "lock screen")
+        login=$(_pick_wallpaper "Login" "login screen")
+    else
+        desktop=$(_pick_wallpaper "All" "desktop, lock and login screens")
         lock="$desktop"
         login="$desktop"
-    else
-        lock=$(_pick_wallpaper "Lock screen")
-        login=$(_pick_wallpaper "Login screen")
     fi
 
     mkdir -p "$active_dir"
