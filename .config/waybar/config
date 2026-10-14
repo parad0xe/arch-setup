@@ -40,7 +40,7 @@
 		"interval": 5,
 		"format": "  {usage}%",
 		"max-length": 10,
-		"on-click": "alacritty -e btop" 
+		"on-click": "ghostty -e btop"
 	},
     "clock": {
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",

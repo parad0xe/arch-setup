@@ -3,6 +3,6 @@
 user_configuration.json
 user_credentials.json
 
-# Variant links created by modules/21_choices.sh
+# Variant links created by choose_variant (modules/core.sh)
 selected
 selected.*

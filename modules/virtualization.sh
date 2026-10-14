@@ -1,5 +1,13 @@
 #!/bin/bash
 
+module "Virtual machines"
+
+# Returns success when this machine can host VMs: not inside a VM, and not
+# on ARM (no UEFI firmware package for ARM VMs).
+_can_host_vms() {
+    ! is_arm && ! in_vm
+}
+
 # Installs QEMU/KVM with libvirt and the virt-manager GUI.
 _install_qemu() {
     local pkgs=(
@@ -43,14 +51,22 @@ _setup_firewall() {
     sudo ufw route allow in on virbr0
 }
 
+# Installs QEMU/KVM with libvirt and virt-manager, enables libvirt with its
+# default NAT network, and lets VM traffic through UFW when it is active.
+_setup_qemu() {
+    _install_qemu
+    _setup_libvirt
+    _setup_firewall
+}
+
 # Installs the tools used by .config/hypr/conf/vm.lua inside a VM.
 _install_guest_tools() {
     # SPICE agent for clipboard sharing with the host
     install_pkg "spice-vdagent"
 }
 
-# Mounts the virtiofs share holding the dotfiles at boot, so the links
-# created by the config module survive a reboot.
+# Mounts the virtiofs share holding the dotfiles at boot, so the config links
+# survive a reboot.
 _persist_dotfiles_share() {
     local fstype source target
     read -r fstype source target < <(findmnt -n -o FSTYPE,SOURCE,TARGET --target "$SETUP_DIR")
@@ -72,20 +88,12 @@ _persist_dotfiles_share() {
     sudo systemctl daemon-reload
 }
 
-# Entry point for the virtualization module.
-setup() {
-    if systemd-detect-virt --vm --quiet; then
-        run_task "Installing VM Guest Tools..." _install_guest_tools
-        run_task "Persisting Dotfiles Share..." _persist_dotfiles_share
-        return 0
-    fi
-
-    if is_arm; then
-        log_info "No UEFI firmware package for ARM VMs, skipping QEMU/KVM."
-        return 0
-    fi
-
-    run_task "Installing QEMU/KVM..." _install_qemu
-    run_task "Configuring libvirt..." _setup_libvirt
-    run_task "Configuring firewall for VMs..." _setup_firewall
+# Installs the SPICE agent (clipboard shared with the host) and mounts the
+# virtiofs share holding the dotfiles at boot.
+_setup_vm_guest() {
+    _install_guest_tools
+    _persist_dotfiles_share
 }
+
+block qemu     _setup_qemu     "QEMU/KVM, libvirt and virt-manager" --if _can_host_vms
+block vm-guest _setup_vm_guest "VM guest tools: SPICE agent, dotfiles share at boot" --if in_vm
