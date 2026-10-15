@@ -104,7 +104,7 @@ _setup_utils() {
         "ripgrep"
     )
 
-    log_info "Installing minimal dev requirements..."
+    log_info "Installing dev utils..."
     for pkg in "${pkgs[@]}"; do
         install_pkg "$pkg"
     done
