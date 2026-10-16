@@ -16,6 +16,12 @@ hl.bind("CTRL + SHIFT + Space", hl.dsp.exec_cmd("rofi -show drun -show-icons -th
 hl.bind(mainMod .. " + Space",  hl.dsp.exec_cmd("rofi -show drun -show-icons -theme ~/.config/rofi/launcher.rasi"))
 hl.bind(mainMod .. " + P",      hl.dsp.exec_cmd("rofi -show run -theme ~/.config/rofi/launcher.rasi"))
 
+-- Screenshot
+hl.bind(mainMod .. " + S",         hl.dsp.exec_cmd([[mkdir -p ~/Pictures/screenshot && grim - | tee ~/Pictures/screenshot/screenshot-$(date +%Y%m%d-%H%M%S).png | wl-copy]]))
+hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd([[mkdir -p ~/Pictures/screenshot && grim -g "$(slurp)" - | tee ~/Pictures/screenshot/screenshot-$(date +%Y%m%d-%H%M%S).png | wl-copy]]))
+hl.bind(mainMod .. " + CTRL + S",  hl.dsp.exec_cmd([[mkdir -p ~/Pictures/screenshot && grim -g "$(slurp)" - | satty --filename - --output-filename ~/Pictures/screenshot/screenshot-$(date +%Y%m%d-%H%M%S).png]]))
+
+
 -- --- WINDOW MANAGEMENT ---
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
