@@ -36,6 +36,12 @@ _setup_shell() {
     log_info "Oh My Zsh installed successfully."
 }
 
+# Installs tmux
+_setup_tmux() {
+    log_info "Installing tmux..."
+	install_pkg "tmux"
+}
+
 # Installs Vim and vim-plug.
 _setup_vim() {
     install_pkg "vim"
@@ -44,7 +50,7 @@ _setup_vim() {
     curl -fLo "$HOME/.vim/autoload/plug.vim" --create-dirs \
         "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
 }
-
+	
 # Installs the yazi terminal file manager.
 _install_yazi() {
     log_info "Installing yazi..."
@@ -52,6 +58,7 @@ _install_yazi() {
 }
 
 block shell _setup_shell   "Zsh, Oh My Zsh, Starship, eza, bat, zoxide, fzf, fastfetch"
+block tmux _setup_tmux "Tmux terminal multiplexer" --needs shell
 block vim   _setup_vim     "Vim and vim-plug"
 block yazi  _install_yazi  "yazi terminal file manager"
 
@@ -63,6 +70,11 @@ config zshrc .config/zshrc .zshrc "Zsh: Oh My Zsh plugins, aliases, prompt, tool
     --program zsh \
     --copy \
     --needs vim
+
+config tmux .config/tmux .tmux.conf "Tmux: deploying .tmux.conf" --block tmux \
+    --program tmux \
+    --copy
+
 
 config starship .config/starship/nerd-font-symbols.toml .config/starship.toml "Starship prompt with Nerd Font symbols" --block shell \
     --program starship
