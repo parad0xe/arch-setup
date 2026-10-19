@@ -36,7 +36,9 @@ _setup_shell() {
     log_info "Oh My Zsh installed successfully."
 }
 
+# Installs tmux
 _setup_tmux() {
+    log_info "Installing tmux..."
 	install_pkg "tmux"
 }
 
