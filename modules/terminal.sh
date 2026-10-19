@@ -55,9 +55,13 @@ block shell _setup_shell   "Zsh, Oh My Zsh, Starship, eza, bat, zoxide, fzf, fas
 block vim   _setup_vim     "Vim and vim-plug"
 block yazi  _install_yazi  "yazi terminal file manager"
 
+# The zshrc and the vimrc are copied: they are edited on each machine, and
+# these edits stay out of the repository.
+
 # It sets Vim as the editor (git commit, sudoedit...)
 config zshrc .config/zshrc .zshrc "Zsh: Oh My Zsh plugins, aliases, prompt, tools" --block shell \
     --program zsh \
+    --copy \
     --needs vim
 
 config starship .config/starship/nerd-font-symbols.toml .config/starship.toml "Starship prompt with Nerd Font symbols" --block shell \
@@ -67,4 +71,5 @@ config fastfetch .config/fastfetch .config/fastfetch "fastfetch system summary" 
     --program fastfetch
 
 config vimrc .config/vimrc .vimrc "Vim settings" --block vim \
-    --program vim
+    --program vim \
+    --copy

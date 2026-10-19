@@ -198,6 +198,48 @@ link_config() {
     ln -s "$src" "$dest"
 }
 
+# Copies a configuration into the home folder, for a file edited on each
+# machine: the edits stay out of the repository. An identical copy is left
+# as is, a link (an earlier deployment) is replaced, and a different file is
+# kept as .bak, or as .bak.1, .bak.2... so that no backup is overwritten.
+#
+# Args:
+#   src: The file or folder to copy.
+#   dest: Where to copy it.
+copy_config() {
+    local src="$1"
+    local dest="$2"
+
+    local src_name=$(basename "$src")
+    local short_src="${src/$HOME/\~}"
+    local short_dest="${dest/$HOME/\~}"
+
+    mkdir -p "$(dirname "$dest")"
+
+    if [ -L "$dest" ]; then
+        rm "$dest"
+    elif [ -e "$dest" ]; then
+        if diff -rq "$src" "$dest" > /dev/null 2>&1; then
+            log_info "Configuration already up to date: $short_dest"
+            return
+        fi
+        local backup="${dest}.bak" n=1
+        while [ -e "$backup" ] || [ -L "$backup" ]; do
+            backup="${dest}.bak.$n"
+            n=$((n + 1))
+        done
+        log_warn "Archiving configuration:
+      ├─ old: $short_dest
+      └─ bak: ${backup/$HOME/\~}"
+        mv "$dest" "$backup"
+    fi
+
+    log_info "Copying configuration ($src_name):
+      ├─ src: $short_src
+      └─ dst: $short_dest"
+    cp -R "$src" "$dest"
+}
+
 # ==========================================
 # CONFIG VARIANTS
 # ==========================================
@@ -467,7 +509,8 @@ run_block() {
 # CONFIGS
 # ==========================================
 # A config of the repository is deployed as a symbolic link from the home
-# folder, declared with `config` by the module of the program it configures.
+# folder, or as a copy (--copy), declared with `config` by the module of the
+# program it configures.
 # setup.sh offers the configs of the blocks it runs in a menu, adds the
 # blocks and configs they need, and deploys them after all the blocks.
 # With -c, it offers only the given configs whose program is installed.
@@ -475,13 +518,15 @@ run_block() {
 declare -ga CONFIG_IDS=()
 declare -gA CONFIG_SOURCE=() CONFIG_TARGET=() CONFIG_DESCRIPTION=() CONFIG_BLOCK=()
 declare -gA CONFIG_PROGRAM=() CONFIG_NEEDS=() CONFIG_NEEDS_CONFIG=() CONFIG_THEN=()
+declare -gA CONFIG_COPY=()
 
 # Declares a config the setup can deploy.
 #
 # Args:
 #   id: The config id (e.g. waybar).
 #   source: Its path in the repository (e.g. .config/waybar).
-#   target: Where it is linked, from the home folder (e.g. .config/waybar).
+#   target: Where it is linked or copied, from the home folder (e.g.
+#       .config/waybar).
 #   description: One line shown in the menu.
 #   ...: Options:
 #       --block <id>         The block installing the program it configures:
@@ -495,7 +540,9 @@ declare -gA CONFIG_PROGRAM=() CONFIG_NEEDS=() CONFIG_NEEDS_CONFIG=() CONFIG_THEN
 #       --needs-config <id>  A config without which this one would break (it
 #                            uses that config's files), added with it. Can
 #                            be repeated.
-#       --then <function>    Runs once it is linked (e.g. installs plugins).
+#       --copy               Copies the config instead of linking it, for a
+#                            file edited on each machine (see copy_config).
+#       --then <function>    Runs once it is deployed (e.g. installs plugins).
 config() {
     local id="$1"
     if [ -n "${CONFIG_SOURCE[$id]}" ]; then
@@ -515,6 +562,7 @@ config() {
             --program) CONFIG_PROGRAM[$id]="$2"; shift ;;
             --needs) CONFIG_NEEDS[$id]+="$2 "; shift ;;
             --needs-config) CONFIG_NEEDS_CONFIG[$id]+="$2 "; shift ;;
+            --copy) CONFIG_COPY[$id]=1 ;;
             --then) CONFIG_THEN[$id]="$2"; shift ;;
             *) log_error "Unknown option for config $id: $1"; exit 1 ;;
         esac
@@ -541,9 +589,9 @@ config_choices() {
 }
 
 # Deploys a config: links the variant to use for each of its choices, links
-# the config into the home folder (an existing one is kept as .bak), then
-# runs its --then function. A config whose source is a choice is linked to
-# its selected variant.
+# the config into the home folder (an existing one is kept as .bak), or
+# copies it with --copy, then runs its --then function. A config whose
+# source is a choice is linked to its selected variant, or a copy of it.
 #
 # Args:
 #   id: The config id.
@@ -564,9 +612,18 @@ deploy_config() {
     local source="$SETUP_DIR/${CONFIG_SOURCE[$id]}"
     if [ -f "$source/.choice" ]; then
         entry=$(_variant_entry "${CONFIG_SOURCE[$id]}" "$(choice_variant "${CONFIG_SOURCE[$id]}")")
-        source="$source/$(_selection_name "$source" "$entry")"
+        if [ -n "${CONFIG_COPY[$id]}" ]; then
+            source="$source/$entry"
+        else
+            source="$source/$(_selection_name "$source" "$entry")"
+        fi
     fi
-    link_config "$source" "$HOME/${CONFIG_TARGET[$id]}"
+
+    if [ -n "${CONFIG_COPY[$id]}" ]; then
+        copy_config "$source" "$HOME/${CONFIG_TARGET[$id]}"
+    else
+        link_config "$source" "$HOME/${CONFIG_TARGET[$id]}"
+    fi
 
     if [ -n "${CONFIG_THEN[$id]}" ]; then
         "${CONFIG_THEN[$id]}"

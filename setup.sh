@@ -381,8 +381,8 @@ _block_preview() {
     fi
 }
 
-# Prints the menu preview of a config: where it is linked, the block of its
-# program, what it needs and what it runs once linked.
+# Prints the menu preview of a config: where it is linked or copied, the
+# block of its program, what it needs and what it runs once deployed.
 #
 # Args:
 #   id: The config id.
@@ -392,7 +392,11 @@ _config_preview() {
     local id="$1"
     local added="${2:-added automatically}"
     printf '%s → ~/%s\n%s\n\n' "$id" "${CONFIG_TARGET[$id]}" "${CONFIG_DESCRIPTION[$id]}"
-    printf 'Links %s from the repository; an existing config\nis kept as .bak.\n' "${CONFIG_SOURCE[$id]}"
+    if [ -n "${CONFIG_COPY[$id]}" ]; then
+        printf 'Copies %s from the repository, so your edits\nof the copy stay out of it; a different existing\nfile is kept as .bak.\n' "${CONFIG_SOURCE[$id]}"
+    else
+        printf 'Links %s from the repository; an existing config\nis kept as .bak.\n' "${CONFIG_SOURCE[$id]}"
+    fi
     printf '\nOffered when this block runs: %s\n' "${CONFIG_BLOCK[$id]}"
     if [ -n "${CONFIG_NEEDS[$id]}" ]; then
         printf '\nNeeds the blocks (%s): %s\n' "$added" "${CONFIG_NEEDS[$id]% }"
@@ -401,7 +405,7 @@ _config_preview() {
         printf '\nNeeds the configs (%s): %s\n' "$added" "${CONFIG_NEEDS_CONFIG[$id]% }"
     fi
     if [ -n "${CONFIG_THEN[$id]}" ]; then
-        printf '\nOnce linked:\n%s\n' "$(function_doc "${CONFIG_THEN[$id]}")"
+        printf '\nOnce deployed:\n%s\n' "$(function_doc "${CONFIG_THEN[$id]}")"
     fi
 }
 
@@ -804,7 +808,7 @@ _confirm_summary() {
     previews=$(mktemp -d)
 
     local dim=$'\e[2m' reset=$'\e[0m'
-    local lines=() index=0 id why variants
+    local lines=() index=0 id why notes
     for id in "${summary_order[@]}"; do
         index=$((index + 1))
         why=""
@@ -819,13 +823,17 @@ _confirm_summary() {
 
     if [ "${#summary_configs[@]}" -gt 0 ]; then
         lines+=("$(printf -- "-\t     $dim── Configs, deployed after the blocks ──$reset")")
-        echo "The configs are linked once all the blocks have run." > "$previews/-"
+        echo "The configs are linked, or copied, once all the blocks have run." > "$previews/-"
         for id in "${summary_configs[@]}"; do
             index=$((index + 1))
             why="${summary_config_reasons[$id]}"
-            variants=$(_config_variants_text "$id")
+            # "copied" for a copied config, then its variants
+            notes=$(_config_variants_text "$id")
+            if [ -n "${CONFIG_COPY[$id]}" ]; then
+                notes="copied${notes:+, $notes}"
+            fi
             lines+=("$(printf "config:%s\t%3d. %-26s $dim%-28s$reset → ~/%s%s" "$id" "$index" "$id" "$why" \
-                "${CONFIG_TARGET[$id]}" "${variants:+  ($variants)}")")
+                "${CONFIG_TARGET[$id]}" "${notes:+  ($notes)}")")
             _config_preview "$id" > "$previews/config:$id"
         done
     fi
@@ -1176,8 +1184,8 @@ _list() {
 
     printf '\nConfigs, deployed after the blocks (./setup.sh -c <pattern>):\n\n'
     for id in "${CONFIG_IDS[@]}"; do
-        printf '  %-12s %-28s %s \033[2m(with %s)\033[0m\n' "$id" "~/${CONFIG_TARGET[$id]}" \
-            "${CONFIG_DESCRIPTION[$id]}" "${CONFIG_BLOCK[$id]}"
+        printf '  %-12s %-28s %s \033[2m(with %s%s)\033[0m\n' "$id" "~/${CONFIG_TARGET[$id]}" \
+            "${CONFIG_DESCRIPTION[$id]}" "${CONFIG_BLOCK[$id]}" "${CONFIG_COPY[$id]:+, copied}"
     done
 
     printf '\nProfiles (./setup.sh -p <name>; local ones in %s):\n\n' "${USER_PROFILES_DIR/#$HOME/\~}"
