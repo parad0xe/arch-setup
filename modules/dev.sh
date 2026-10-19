@@ -63,14 +63,13 @@ _setup_rust() {
     rustup default stable
 }
 
-# Installs Neovim with the tools its config runs: lazygit (<space>lg),
-# ripgrep (Telescope live grep), tree-sitter-cli (Treesitter parsers) and
+# Installs Neovim with the tools its config runs: lazygit (<space>lg), 
+# tree-sitter-cli (Treesitter parsers) and
 # unzip (Mason packages).
 _setup_neovim() {
     local pkgs=(
         "neovim"
         "lazygit"
-        "ripgrep"
         "tree-sitter-cli"
         "unzip"
     )
@@ -96,11 +95,26 @@ _install_nvim_plugins() {
     nvim --headless +PlugInstall +qall
 }
 
-block python _setup_python "Python via pyenv, uv, pyright, flake8, mypy"
-block node   _setup_node   "nvm and the latest Node.js"
-block rust   _setup_rust   "Rust toolchain via rustup"
+# Installs some utils like: 
+# ripgrep (Telescope live grep)
+# man-db
+_setup_utils() {
+	local pkgs=(
+        "man-db"
+        "ripgrep"
+    )
 
-block neovim _setup_neovim "Neovim and the tools its config runs"
+    log_info "Installing dev utils..."
+    for pkg in "${pkgs[@]}"; do
+        install_pkg "$pkg"
+    done
+}
+
+block python 	_setup_python	"Python via pyenv, uv, pyright, flake8, mypy"
+block node   	_setup_node  	"nvm and the latest Node.js"
+block rust   	_setup_rust  	"Rust toolchain via rustup"
+block neovim	_setup_neovim	"Neovim and the tools its config runs"
+block utils		_setup_utils	"Terminal utilities (man, ripgrep, ..)"
 
 # Mason installs its language servers and linters with pip (Python) and npm
 # (Node.js)
