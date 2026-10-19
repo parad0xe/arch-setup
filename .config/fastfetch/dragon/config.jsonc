@@ -1,0 +1,85 @@
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "logo": {
+        "source": "\u001b[38;2;106;13;173m\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u28c0\u001b[0m\n\u001b[38;2;116;24;178m\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2880\u28e4\u28f6\u284b\u2801\u2800\u2800\u2800\u2800\u2880\u28c0\u28c0\u2840\u001b[0m\n\u001b[38;2;126;34;183m\u2800\u2800\u2800\u2800\u2800\u2820\u2812\u28f6\u28f6\u28ff\u28ff\u28f7\u28fe\u28ff\u28ff\u28ff\u28ff\u28db\u28cb\u28c9\u2800\u2800\u001b[0m\n\u001b[38;2;136;44;188m\u2800\u2800\u2800\u2800\u2880\u28e4\u28de\u28eb\u28ff\u28ff\u28ff\u287b\u28bf\u28ff\u28ff\u28ff\u28ff\u28ff\u28e6\u2840\u2800\u2800\u001b[0m\n\u001b[38;2;147;55;193m\u2800\u2800\u28f6\u28fe\u287f\u283f\u283f\u283f\u283f\u280b\u2808\u2800\u28f8\u28ff\u28ff\u28ff\u28ff\u28f7\u2848\u2819\u2886\u2800\u001b[0m\n\u001b[38;2;157;66;198m\u2800\u2800\u2809\u2801\u2800\u2824\u28e4\u28e4\u28e4\u28e4\u28f6\u28fe\u28ff\u28ff\u28ff\u28ff\u283f\u28ff\u28f7\u2800\u2800\u2800\u001b[0m\n\u001b[38;2;167;76;202m\u2800\u2800\u28e0\u28f4\u28fe\u28ff\u28ff\u28ff\u28ff\u28ff\u28ff\u28ff\u28ff\u287f\u281f\u2801\u2800\u28b9\u28ff\u2800\u2800\u2800\u001b[0m\n\u001b[38;2;177;86;207m\u28a0\u28fe\u28ff\u28ff\u28ff\u28ff\u281f\u280b\u2809\u281b\u280b\u2809\u2801\u28c0\u2800\u2800\u2800\u2838\u2803\u2800\u2800\u2800\u001b[0m\n\u001b[38;2;187;97;212m\u28ff\u28ff\u28ff\u28ff\u2839\u28c7\u2800\u2800\u2800\u2800\u2880\u2840\u2800\u2880\u2859\u28b7\u28e6\u28c4\u2840\u2800\u2800\u2800\u001b[0m\n\u001b[38;2;198;108;217m\u28ff\u28bf\u28ff\u28ff\u28f7\u28e6\u2824\u2824\u2800\u2800\u28e0\u28ff\u28f6\u28f6\u28ff\u28ff\u28ff\u28ff\u28ff\u28f7\u28c4\u2800\u001b[0m\n\u001b[38;2;208;118;222m\u2808\u2808\u28ff\u287f\u28bf\u28ff\u28ff\u28f7\u28ff\u28ff\u287f\u28bf\u28ff\u28ff\u28c1\u2840\u2800\u2800\u2809\u28bb\u28ff\u28e7\u001b[0m\n\u001b[38;2;218;128;227m\u2800\u2880\u285f\u2800\u2800\u2809\u281b\u2819\u283b\u28bf\u28e6\u2840\u2819\u281b\u282f\u2824\u2804\u2800\u2800\u2808\u2808\u28ff\u001b[0m\n\u001b[38;2;228;139;232m\u2800\u2808\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2808\u283b\u2846\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2880\u281f\u001b[0m",
+        "type": "data-raw",
+        "padding": {
+            "top": 0,
+            "right": 4,
+            "left": 1
+        }
+    },
+    "display": {
+        "separator": " ",
+        "color": {
+            "keys": "#A855F7"
+        }
+    },
+    "modules": [
+        {
+            "key": "╭───────────╮",
+            "type": "custom"
+        },
+        {
+            "key": "│ \u001b[38;2;106;13;173m{icon} distro  {#keys}│",
+            "type": "os"
+        },
+        {
+            "key": "│ \u001b[38;2;123;22;201m kernel  {#keys}│",
+            "type": "kernel"
+        },
+        {
+            "key": "│ \u001b[38;2;138;43;226m wm      {#keys}│",
+            "type": "wm",
+        },
+        {
+            "key": "│ \u001b[38;2;148;0;211m󰇄 desktop {#keys}│",
+            "type": "de"
+        },
+        {
+            "key": "│ \u001b[38;2;160;32;240m term    {#keys}│",
+            "type": "terminal"
+        },
+        {
+            "key": "│ \u001b[38;2;177;59;235m shell   {#keys}│",
+            "type": "shell"
+        },
+        {
+            "key": "│ \u001b[38;2;186;85;211m󰍛 cpu     {#keys}│",
+            "type": "cpu",
+            "showPeCoreCount": true,
+        },
+        {
+            "type": "gpu",
+	          "key": "│ \u001b[38;2;193;91;235m󰢮 gpu     {#keys}│",
+	          "hideType": "integrated",
+            "format": "{1} {2}"
+        },
+        {
+            "key": "│ \u001b[38;2;203;108;230m󰉉 disk    {#keys}│",
+            "type": "disk",
+            "folders": "/"
+        },
+        {
+            "key": "│ \u001b[38;2;217;112;232m memory  {#keys}│",
+            "type": "memory"
+        },
+        {
+            "key": "│ \u001b[38;2;218;112;214m󰅐 uptime  {#keys}│",
+            "type": "uptime"
+        },
+        {
+            "key": "├───────────┤",
+            "type": "custom"
+        },
+        {
+            "key": "│ \u001b[38;2;228;139;232m colors  {#keys}│",
+            "type": "colors",
+            "symbol": "circle"
+        },
+        {
+            "key": "╰───────────╯",
+            "type": "custom"
+        }
+    ]
+}
