@@ -154,8 +154,8 @@ fi
 ########################################
 # Editor
 ########################################
-export VISUAL="nvim"
-export EDITOR="nvim"
+export VISUAL="vim"
+export EDITOR="vim"
 
 
 ########################################
