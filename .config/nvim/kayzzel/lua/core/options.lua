@@ -17,7 +17,7 @@ opt.autoindent = true
 opt.backspace = "indent,eol,start"
 
 -- keep cursor centered vertically while scrolling
-opt.scrolloff = 15
+opt.scrolloff = 10
 
 -- splits open in a more natural direction
 vim.opt.splitright = true -- vertical splits open on the right
