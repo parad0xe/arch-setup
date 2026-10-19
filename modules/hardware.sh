@@ -17,7 +17,6 @@ _setup_audio() {
         "pipewire"
         "pipewire-alsa"
         "pipewire-pulse"
-        "pipewire-jack"
         "wireplumber"
     )
 
@@ -25,6 +24,13 @@ _setup_audio() {
     for pkg in "${pkgs[@]}"; do
         install_pkg "$pkg"
     done
+
+	# In some case, blocks running earlier (like app.krita via ffmpeg, 
+	# desktop via waybar, ..) need JACK, for which --noconfirm
+	# install jack2. pipewire-jack replaces it.
+	# yes answer the "Remove jacks2?" question, which --noconfirm declines.
+	log_info "Checking and installing: pipewire-jack"
+	yes | sudo pacman -S --needed pipewire-jack
 }
 
 # Installs the Bluetooth stack (bluez, bluetoothctl) and enables the service.
