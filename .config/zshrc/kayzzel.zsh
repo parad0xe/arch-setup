@@ -170,6 +170,7 @@ alias x="exit"                   # exit shell
 alias cm="clear; fastfetch"       # clear + show system info
 alias ll="ls -la"
 alias vim="nvim"                 # map vim to neovim
+alias vi="/usr/bin/vim"
 alias norm="norminette"          # custom tool
 alias ccf="cc -Wall -Werror -Wextra"
 alias config_ghostty="vim ~/Library/Application\\ Support/com.mitchellh.ghostty"
