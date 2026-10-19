@@ -9,8 +9,8 @@ the installation and configuration of a complete Arch Linux environment.
   configs to deploy in menus, and check the summary of what will run; the
   blocks and configs they need are added and run in dependency order.
 * Optional Configs: The configs of this repository are deployed only when
-  selected, with their variants (keybindings, keyboard layout, Waybar theme)
-  picked in the menu.
+  selected, with their variants (keybindings, keyboard layout, Waybar theme,
+  zshrc, vimrc) picked in the menu.
 * NVIDIA Optimized: Automatic driver installation and DRM configuration
   when an NVIDIA GPU is detected.
 * ARM Support: Runs on Arch Linux ARM (aarch64, e.g. Asahi Linux on Apple
@@ -134,12 +134,19 @@ the config, and the config is linked to the selected one:
 └── selected       → glass/   (~/.config/waybar → .config/waybar/selected)
 ```
 
+A config declared with `--copy` is copied instead of linked: the zshrc and
+the vimrc, edited on each machine, so that these edits stay out of the
+repository. Their variants are files (`.config/zshrc/default.zsh`), and the
+selected one is copied to `~/.zshrc`. Deploying it again leaves an
+identical copy as is and keeps a different one (your edits) as `.bak`, or
+as `.bak.1`, `.bak.2`... so that no backup is overwritten.
+
 ## Configuration
 
 Nothing needs to be edited before launching: the setup asks for your
 personal settings (SSH key email, Git name and email, timezone) during the
 install, and the config variants (keybindings, keyboard layout, Waybar
-theme) are picked in the configs menu or set by the profile.
+theme, zshrc, vimrc) are picked in the configs menu or set by the profile.
 
 Machine-specific SSH settings (hosts, extra keys) go in `~/.ssh/config.d/`,
 which is included by the versioned SSH config but never versioned itself.
@@ -203,7 +210,8 @@ Examples:
 ## Notes
 
 * A reboot is required to enable NVIDIA drivers and the SDDM service.
-* Existing configurations are backed up with the .bak extension.
+* Existing configurations are backed up with the .bak extension (.bak.1,
+  .bak.2... for a copied config whose .bak already exists).
 * On ARM, Ghostty is compiled from the AUR (`ghostty-git`) and rofi 2 from
   the Arch Linux PKGBUILD (the ARM repositories only have rofi 1.7.5, X11
   only); the apps only published for x86_64 (Discord, JetBrains Toolbox,
