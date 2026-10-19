@@ -81,7 +81,8 @@ _install_yay() {
 # Always run, before the other blocks: they all need an up-to-date system,
 # the base packages and yay. Each one needs the previous one, which orders
 # them.
-block system      _update_system           "multilib (x86_64), keyring and full system update" --required
+block system      _update_system           "multilib (x86_64), keyring and full system update" --required \
+	--unless is_arm
 block system.base _install_system_packages "Base packages (base-devel, git, curl, wget, openssl, openssh, tree, ncdu)" --required \
     --needs system
 block system.yay  _install_yay             "yay AUR helper" --required \
