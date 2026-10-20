@@ -126,15 +126,25 @@ log_error() {
     printf "\r\033[K\033[1;31m[✖]\033[0m %s\n" "$1" > /dev/tty
 }
 
-# Asks a yes/no question, yes being the answer to Enter.
+# Asks a yes/no question, yes being the answer to Enter, or no when the
+# default is "no".
 #
 # Args:
 #   question: The question to display.
+#   default: "no" to make no the answer to Enter (default: "yes").
 confirm() {
-    local answer="y"
-    printf "\r\033[K\033[1;34m[i]\033[0m %s [Y/n]: " "$1" > /dev/tty
+    local answer="" choices="[Y/n]"
+    if [ "${2:-yes}" = no ]; then
+        choices="[y/N]"
+    fi
+    printf "\r\033[K\033[1;34m[i]\033[0m %s %s: " "$1" "$choices" > /dev/tty
     read -r answer < /dev/tty
-    [[ ! "$answer" =~ ^[Nn]$ ]]
+
+    if [ "${2:-yes}" = no ]; then
+        [[ "$answer" =~ ^[Yy]$ ]]
+    else
+        [[ ! "$answer" =~ ^[Nn]$ ]]
+    fi
 }
 
 # Returns success on a 64-bit ARM CPU (e.g. Apple Silicon with Asahi Linux),
@@ -518,7 +528,7 @@ run_block() {
 declare -ga CONFIG_IDS=()
 declare -gA CONFIG_SOURCE=() CONFIG_TARGET=() CONFIG_DESCRIPTION=() CONFIG_BLOCK=()
 declare -gA CONFIG_PROGRAM=() CONFIG_NEEDS=() CONFIG_NEEDS_CONFIG=() CONFIG_THEN=()
-declare -gA CONFIG_COPY=()
+declare -gA CONFIG_COPY=() CONFIG_INTERACTIVE=()
 
 # Declares a config the setup can deploy.
 #
@@ -542,6 +552,9 @@ declare -gA CONFIG_COPY=()
 #                            be repeated.
 #       --copy               Copies the config instead of linking it, for a
 #                            file edited on each machine (see copy_config).
+#       --interactive        Deploys it in the foreground instead of behind
+#                            the spinner, for a --then function that asks
+#                            questions.
 #       --then <function>    Runs once it is deployed (e.g. installs plugins).
 config() {
     local id="$1"
@@ -563,6 +576,7 @@ config() {
             --needs) CONFIG_NEEDS[$id]+="$2 "; shift ;;
             --needs-config) CONFIG_NEEDS_CONFIG[$id]+="$2 "; shift ;;
             --copy) CONFIG_COPY[$id]=1 ;;
+            --interactive) CONFIG_INTERACTIVE[$id]=1 ;;
             --then) CONFIG_THEN[$id]="$2"; shift ;;
             *) log_error "Unknown option for config $id: $1"; exit 1 ;;
         esac
@@ -630,10 +644,21 @@ deploy_config() {
     fi
 }
 
-# Deploys a config behind the spinner.
+# Deploys a config: behind the spinner, or in the foreground when
+# interactive.
 #
 # Args:
 #   id: The config id.
 run_config() {
-    run_task "Config $1: ${CONFIG_DESCRIPTION[$1]}" deploy_config "$1"
+    local id="$1"
+    local description="Config $id: ${CONFIG_DESCRIPTION[$id]}"
+
+    if [ -z "${CONFIG_INTERACTIVE[$id]}" ]; then
+        run_task "$description" deploy_config "$id"
+        return
+    fi
+
+    log_info "$description"
+    deploy_config "$id"
+    printf "\033[1;32m✔\033[0m  %s\n\n" "$description"
 }

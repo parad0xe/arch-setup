@@ -198,6 +198,27 @@ _setup_ddcutil() {
     install_pkg "ddcutil"
 }
 
+# Restarts Waybar so that it loads the deployed config and theme, or asks
+# whether to start it when it does not run; nothing outside a Wayland
+# session (TTY, SSH). setsid detaches it from the setup and its terminal.
+_reload_waybar() {
+    if [ -z "$WAYLAND_DISPLAY" ]; then
+        return 0
+    fi
+
+    if ! pgrep -x waybar > /dev/null; then
+        if confirm "Do you want to start Waybar?" no; then
+            log_info "Starting Waybar..."
+            setsid -f waybar > /dev/null 2>&1
+        fi
+        return 0
+    fi
+
+    log_info "Restarting Waybar..."
+    killall waybar || true
+    setsid -f waybar > /dev/null 2>&1
+}
+
 # Installs the JetBrains Mono Nerd Font, used by Waybar, mako, rofi,
 # hyprlock and Ghostty (its glyphs show as boxes without it).
 _install_fonts() {
@@ -245,7 +266,9 @@ config waybar .config/waybar .config/waybar "Waybar bar and its modules" --block
     --needs desktop.applets \
     --needs app.ghostty \
     --needs fonts \
-    --needs-config hypr
+    --needs-config hypr \
+    --interactive \
+    --then _reload_waybar
 
 config mako .config/mako .config/mako "mako notifications" --block desktop \
     --program mako \
