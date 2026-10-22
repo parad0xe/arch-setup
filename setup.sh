@@ -1184,7 +1184,7 @@ _list() {
 
     printf '\nConfigs, deployed after the blocks (./setup.sh -c <pattern>):\n\n'
     for id in "${CONFIG_IDS[@]}"; do
-        printf '  %-12s %-28s %s \033[2m(with %s%s)\033[0m\n' "$id" "~/${CONFIG_TARGET[$id]}" \
+        printf '  %-20s %-32s %s \033[2m(with %s%s)\033[0m\n' "$id" "~/${CONFIG_TARGET[$id]}" \
             "${CONFIG_DESCRIPTION[$id]}" "${CONFIG_BLOCK[$id]}" "${CONFIG_COPY[$id]:+, copied}"
     done
 
