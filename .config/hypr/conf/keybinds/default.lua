@@ -99,3 +99,5 @@ hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/
 -- --- SYSTEM MENUS ---
 -- Wifi
 hl.bind("SUPER + N", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/wifi.sh"))
+-- Bluetooth
+hl.bind("SUPER + B", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/bluetooth.sh"))

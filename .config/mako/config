@@ -86,17 +86,3 @@ progress-color=source #8839ef
 [category=clipboard]
 border-color=#6c7086
 default-timeout=1500
-
-# --- CATEGORY SPECIFIC: WI-FI ---
-
-[category=wifi-scan]
-border-color=#a6e3a1
-default-timeout=40000
-
-[category=wifi-auth]
-border-color=#a6e3a1
-default-timeout=40000
-
-[category=wifi-result]
-border-color=#a6e3a1
-default-timeout=3000

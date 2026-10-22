@@ -102,12 +102,65 @@ _install_desktop_tools() {
     install_aur_pkg "wlogout"
 }
 
-# Installs the tray applets started by the Hyprland config: nm-applet
-# (network) and blueman (Bluetooth, also opened from Waybar).
-_install_applets() {
-    log_info "Installing network and Bluetooth applets..."
-    install_pkg "network-manager-applet"
-    install_pkg "blueman"
+# Builds wlctl, the Wi-Fi manager, from the AUR (wlctl-git) with the
+# passphrase hidden while it is typed (Ctrl+H shows it): wlctl shows it by
+# default, and no setting changes that. Built with cargo, on x86_64 and ARM.
+# It replaces wlctl-bin, installed by hand.
+_build_wlctl() {
+    if pacman -Q wlctl-git &>/dev/null; then
+        log_warn "wlctl is already built."
+        return
+    fi
+
+    local build_dir="$HOME/.cache/wlctl-git-build"
+    rm -rf "$build_dir"
+
+    log_info "Downloading the wlctl-git PKGBUILD..."
+    git clone https://aur.archlinux.org/wlctl-git.git "$build_dir"
+    cd "$build_dir" || exit
+
+    # -o downloads and prepares the sources without building them, so that
+    # they can be changed before the build
+    log_info "Downloading the wlctl sources and their crates..."
+    makepkg -o -s --noconfirm
+
+    log_info "Hiding the passphrase while it is typed..."
+    local psk="src/wlctl/src/mode/station/auth/psk.rs"
+    sed -i 's/show_password: true,/show_password: false,/' "$psk"
+    if ! grep -q 'show_password: false,' "$psk"; then
+        log_error "wlctl changed: the passphrase cannot be hidden ($psk)."
+        return 1
+    fi
+
+    # -e builds the changed sources instead of extracting them again
+    log_info "Building wlctl, this takes a few minutes (output in /tmp/setup.log)..."
+    makepkg -e --nocheck --noconfirm
+
+    # yes answers the removal of wlctl-bin, which conflicts with wlctl-git
+    log_info "Installing wlctl-git..."
+    local pkgs
+    mapfile -t pkgs < <(makepkg --packagelist)
+    yes | sudo pacman -U "${pkgs[@]}"
+
+    log_info "Removing the build directory..."
+    cd "$HOME" || exit
+    rm -rf "$build_dir"
+
+    log_success "wlctl built and installed."
+}
+
+# Installs the Wi-Fi manager (wlctl, with speedtest-cli for its speed test)
+# and the Bluetooth manager (bluetui): terminal interfaces opened by the
+# Wi-Fi and Bluetooth scripts of the Hyprland config, from Waybar and the
+# keybindings.
+_install_connectivity() {
+    _build_wlctl
+
+    log_info "Installing speedtest-cli (speed test of wlctl)..."
+    install_pkg "speedtest-cli"
+
+    log_info "Installing the Bluetooth manager (bluetui)..."
+    install_pkg "bluetui"
 }
 
 # Installs what the wallpaper scripts run: awww (images), mpvpaper (videos)
@@ -230,7 +283,7 @@ block desktop _install_desktop "Hyprland desktop: Hyprland, Waybar, mako, polkit
 
 block desktop.hypr-tools         _install_hypr_tools        "hyprlock (lock), hyprshutdown (log out), hyprmon (monitors)"
 block desktop.tools              _install_desktop_tools     "rofi, wlogout, screenshots, clipboard, media keys, notifications"
-block desktop.applets            _install_applets           "Network and Bluetooth tray applets (nm-applet, blueman)" \
+block desktop.connectivity       _install_connectivity      "Wi-Fi manager (wlctl) and Bluetooth manager (bluetui)" \
     --needs network \
     --needs bluetooth
 block desktop.wallpaper-engines  _install_wallpaper_engines "Wallpaper engines: awww (images), mpvpaper (videos)"
@@ -242,14 +295,14 @@ block desktop.ddcutil            _setup_ddcutil             "ddcutil: external m
 block fonts _install_fonts "JetBrains Mono Nerd Font"
 
 # The Hyprland config runs commands from these blocks: keybindings (terminal,
-# browser, file manager, lock, launcher, screenshots, volume), autostart
-# (applets, wallpaper engines) and its scripts. Its launcher and wallpaper
-# selector use the rofi themes.
+# browser, file manager, lock, launcher, Wi-Fi and Bluetooth managers,
+# screenshots, volume), autostart (wallpaper engines) and its scripts. Its
+# launcher and wallpaper selector use the rofi themes.
 config hypr .config/hypr .config/hypr "Hyprland: keybindings, autostart, scripts" --block desktop \
     --program Hyprland \
     --needs desktop.hypr-tools \
     --needs desktop.tools \
-    --needs desktop.applets \
+    --needs desktop.connectivity \
     --needs desktop.wallpaper-engines \
     --needs audio \
     --needs fonts \
@@ -258,12 +311,12 @@ config hypr .config/hypr .config/hypr "Hyprland: keybindings, autostart, scripts
     --needs app.nautilus \
     --needs-config rofi
 
-# Its modules run the Hyprland scripts (wifi, brightness, laptop keyboard),
-# pavucontrol, blueman, wlogout, and btop in Ghostty
+# Its modules run the Hyprland scripts (Wi-Fi, Bluetooth, brightness, laptop
+# keyboard), pavucontrol, wlogout, and btop in Ghostty
 config waybar .config/waybar .config/waybar "Waybar bar and its modules" --block desktop \
     --program waybar \
     --needs desktop.tools \
-    --needs desktop.applets \
+    --needs desktop.connectivity \
     --needs app.ghostty \
     --needs fonts \
     --needs-config hypr \

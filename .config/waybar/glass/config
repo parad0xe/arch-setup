@@ -76,13 +76,14 @@
         "format-wifi": "{essid} ({signalStrength}%) ",
         "format-ethernet": "{ipaddr}/{cidr} 󰈀",
         "format-disconnected": "Disconnected ⚠",
+        "format-disabled": "Off 󰤭",
         "on-click": "~/.config/hypr/scripts/system/wifi.sh"
     },
     "bluetooth": {
         "format": " {status}",
         "format-connected": " {device_alias}",
         "format-connected-battery": " {device_alias} {device_battery_percentage}%",
-        "on-click": "blueman-manager"
+        "on-click": "~/.config/hypr/scripts/system/bluetooth.sh"
     },
     "tray": {
         "spacing": 10
