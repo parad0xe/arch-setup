@@ -153,6 +153,12 @@ is_arm() {
     [ "$(uname -m)" = "aarch64" ]
 }
 
+# Returns success on an Apple Silicon Mac (Asahi Linux), whose device tree
+# declares the apple,arm-platform compatible.
+is_apple_silicon() {
+    grep -qa 'apple,arm-platform' /proc/device-tree/compatible 2>/dev/null
+}
+
 # Returns success inside a virtual machine.
 in_vm() {
     systemd-detect-virt --vm --quiet

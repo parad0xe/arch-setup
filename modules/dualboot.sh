@@ -2,9 +2,11 @@
 
 module "Dual boot with GRUB"
 
-# Returns success when GRUB is installed, outside a VM and not on ARM.
+# Returns success when GRUB is installed, outside a VM and not on an Apple
+# Silicon Mac: there, macOS is picked in Apple's boot picker (hold the power
+# button), GRUB cannot boot it, and Windows does not run.
 _can_dual_boot() {
-    [ -f /etc/default/grub ] && ! is_arm && ! in_vm
+    [ -f /etc/default/grub ] && ! is_apple_silicon && ! in_vm
 }
 
 # Returns success when GRUB can dual boot and an NTFS partition exists.
