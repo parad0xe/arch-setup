@@ -132,6 +132,10 @@ window#waybar.empty #window {
     color: #6b3a5a;
 }
 
+#network.disabled {
+    color: #4a3a5e;
+}
+
 /* ── Bluetooth ───────────────────────────── */
 #bluetooth {
     color: #8a60c0;

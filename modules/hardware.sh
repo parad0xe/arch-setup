@@ -49,6 +49,13 @@ _setup_bluetooth() {
     sudo systemctl enable bluetooth.service
 }
 
+# Restarts WirePlumber when it runs, so that it applies its deployed config.
+_restart_wireplumber() {
+    log_info "Restarting WirePlumber..."
+    systemctl --user try-restart wireplumber.service \
+        || log_warn "WirePlumber could not be restarted: log in again to apply its config."
+}
+
 # Returns success when a PCI device from NVIDIA (vendor id 0x10de) is present.
 _has_nvidia_gpu() {
     grep -qsx "0x10de" /sys/bus/pci/devices/*/vendor
@@ -120,3 +127,7 @@ block audio       _setup_audio       "PipeWire audio stack"
 block bluetooth   _setup_bluetooth   "Bluetooth stack (bluez)"
 block nvidia      _setup_nvidia      "NVIDIA drivers, early loading, GRUB DRM modeset" --if _has_nvidia_gpu
 block securitykey _setup_securitykey "Smartcard stack for security keys (pcscd)"
+
+config wireplumber .config/wireplumber .config/wireplumber "WirePlumber: Bluetooth audio in A2DP only (no headset microphone)" --block bluetooth \
+    --program wireplumber \
+    --then _restart_wireplumber

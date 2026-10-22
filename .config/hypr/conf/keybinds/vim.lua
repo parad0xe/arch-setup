@@ -184,6 +184,7 @@ hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/
 -- SYSTEM MENUS
 -- ==========================================
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/wifi.sh"))
+hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/bluetooth.sh"))
 
 -- ==========================================
 -- MOUSE — move & resize floating windows
