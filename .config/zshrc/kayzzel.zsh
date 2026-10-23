@@ -11,7 +11,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 
 ########################################
 # Zinit Plugin Manager Setup
@@ -165,6 +165,7 @@ export EDITOR="vim"
 alias ls='ls --color'           # colored ls output
 alias c="clear"                  # clear terminal
 alias x="exit"                   # exit shell
+alias zshreload="source ~/.zshrc" # reload zshrc
 
 # Workflow / tools
 alias cm="clear; fastfetch"       # clear + show system info
