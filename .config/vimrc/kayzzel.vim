@@ -46,3 +46,9 @@ nnoremap N Nzzzv
 " keep visual selection after indenting (instead of losing it)
 vnoremap < <gv
 vnoremap > >gv
+
+" Changed the color
+syntax on
+
+highlight LineNr ctermfg=DarkGrey ctermbg=NONE
+highlight CursorLineNr ctermfg=DarkMagenta ctermbg=NONE
