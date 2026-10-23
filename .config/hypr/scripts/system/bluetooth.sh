@@ -1,9 +1,15 @@
 #!/bin/bash
 
 # Opens bluetui, the Bluetooth manager, in a floating Ghostty window (see
-# conf/windowrules.lua). bluetui stops when the Bluetooth radio is soft
-# blocked (rfkill): it is unblocked first, which the user of the session may
-# do without sudo, then the adapter is waited for in BlueZ.
+# conf/windowrules.lua). bluetui stops when there is no controller, which is
+# reported, or when the Bluetooth radio is soft blocked (rfkill): it is
+# unblocked first, which the user of the session may do without sudo, then
+# the adapter is waited for in BlueZ.
+
+if ! compgen -G '/sys/class/bluetooth/hci*' > /dev/null; then
+    notify-send -u critical "Bluetooth" "No Bluetooth controller found."
+    exit 1
+fi
 
 if rfkill list bluetooth | grep -q 'Hard blocked: yes'; then
     notify-send -u critical "Bluetooth" "The Bluetooth radio is turned off by a hardware switch."
