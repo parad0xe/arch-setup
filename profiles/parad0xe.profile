@@ -6,6 +6,6 @@ config *
 choice .config/hypr/conf/keybinds default
 choice .config/hypr/conf/keyboard default
 choice .config/waybar default
-choice .config/zshrc default
-choice .config/vimrc default
+choice .config/zshrc parad0xe
+choice .config/vimrc parad0xe
 choice .config/local/bin parad0xe
