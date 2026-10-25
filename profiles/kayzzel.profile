@@ -52,3 +52,4 @@ choice .config/zshrc kayzzel
 choice .config/vimrc kayzzel
 choice .config/nvim kayzzel
 choice .config/tmux default
+choice .config/local/bin default
