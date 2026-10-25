@@ -8,3 +8,4 @@ choice .config/hypr/conf/keyboard default
 choice .config/waybar default
 choice .config/zshrc default
 choice .config/vimrc default
+choice .config/local/bin parad0xe

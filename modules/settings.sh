@@ -149,3 +149,10 @@ block timezone _setup_time "System timezone and NTP synchronization" --interacti
 config ssh .config/ssh/config .ssh/config "SSH client: agent, keys (hosts in ~/.ssh/config.d)" --block system.base \
     --program ssh \
     --then _create_ssh_config_d
+
+config bin .config/local/bin .local/bin "Personal scripts in ~/.local/bin" --block system.base \
+    --program bash \
+    --copy \
+    --content-only \
+    --without-backup \
+    --executable
