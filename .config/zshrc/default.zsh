@@ -65,6 +65,11 @@ function ggi() {
     fi
 }
 
+# git log completion for glg (.config/local/bin)
+if [ -f "$HOME/.local/bin/glg" ]; then
+    compdef _git glg=git-log
+fi
+
 fastfetch
 
 if [ -f "$HOME/.local/bin/env" ]; then
