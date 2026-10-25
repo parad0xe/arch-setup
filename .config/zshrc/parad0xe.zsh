@@ -59,8 +59,10 @@ eval "$(starship init zsh)"
 # Activer la coloration syntaxique (commandes en vert/rouge)
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
-# git log completion for glg (.config/local/bin)
+# glg (.config/local/bin) instead of the git plugin's alias, with git log
+# completion
 if [ -f "$HOME/.local/bin/glg" ]; then
+    unalias glg 2> /dev/null
     compdef _git glg=git-log
 fi
 
