@@ -59,12 +59,6 @@ eval "$(starship init zsh)"
 # Activer la coloration syntaxique (commandes en vert/rouge)
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
-function ggi() {
-	if [ ! -f .gitignore ]; then
-        curl -sL "https://www.toptal.com/developers/gitignore/api/$@" > .gitignore
-    fi
-}
-
 # git log completion for glg (.config/local/bin)
 if [ -f "$HOME/.local/bin/glg" ]; then
     compdef _git glg=git-log

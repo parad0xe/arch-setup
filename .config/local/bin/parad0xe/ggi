@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Create a .gitignore from the gitignore.io templates, unless one exists
+ggi() {
+    if [ ! -f .gitignore ]; then
+        curl -sL "https://www.toptal.com/developers/gitignore/api/$@" > .gitignore
+    fi
+}
+
+ggi "$@"
