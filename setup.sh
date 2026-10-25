@@ -392,10 +392,17 @@ _config_preview() {
     local id="$1"
     local added="${2:-added automatically}"
     printf '%s → ~/%s\n%s\n\n' "$id" "${CONFIG_TARGET[$id]}" "${CONFIG_DESCRIPTION[$id]}"
+    local what="${CONFIG_SOURCE[$id]}" kept="kept as .bak"
+    if [ -n "${CONFIG_CONTENT_ONLY[$id]}" ]; then
+        what="the files of $what"
+    fi
+    if [ -n "${CONFIG_WITHOUT_BACKUP[$id]}" ]; then
+        kept="replaced, without .bak"
+    fi
     if [ -n "${CONFIG_COPY[$id]}" ]; then
-        printf 'Copies %s from the repository, so your edits\nof the copy stay out of it; a different existing\nfile is kept as .bak.\n' "${CONFIG_SOURCE[$id]}"
+        printf 'Copies %s from the repository, so your edits\nof the copy stay out of it; a different existing\nfile is %s.\n' "$what" "$kept"
     else
-        printf 'Links %s from the repository; an existing config\nis kept as .bak.\n' "${CONFIG_SOURCE[$id]}"
+        printf 'Links %s from the repository; an existing config\nis %s.\n' "$what" "$kept"
     fi
     printf '\nOffered when this block runs: %s\n' "${CONFIG_BLOCK[$id]}"
     if [ -n "${CONFIG_NEEDS[$id]}" ]; then
