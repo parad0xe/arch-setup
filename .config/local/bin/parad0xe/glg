@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Display git log with a graph view
+glg() {
+    # Log format: hash, author, date, relative time, decorations, subject
+    local log_format="%C(bold #a855f7)%h%C(reset) - %C(#ff966c)<%an>%C(reset) %C(#82aaff)%ad (%ar)%C(reset)%C(bold #ffc777)%d%C(reset)%n          %C(#c9b8e8)%s%C(reset)"
+
+    git log --graph --abbrev-commit --decorate --date=format-local:'%Y-%m-%d %H:%M' \
+        --format=tformat:"$log_format" "$@"
+}
+
+glg "$@"

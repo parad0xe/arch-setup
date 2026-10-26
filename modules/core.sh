@@ -189,6 +189,7 @@ install_aur_pkg() {
 # Args:
 #   src: Source file or directory path.
 #   dest: Destination path for the symbolic link.
+#   backup: "no" to replace an existing configuration without .bak.
 link_config() {
     local src="$1"
     local dest="$2"
@@ -199,7 +200,10 @@ link_config() {
 
     mkdir -p "$(dirname "$dest")"
 
-    if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+    if [ -e "$dest" ] && [ ! -L "$dest" ] && [ "${3:-yes}" = "no" ]; then
+        log_warn "Replacing configuration: $short_dest"
+        rm -rf "$dest"
+    elif [ -e "$dest" ] && [ ! -L "$dest" ]; then
         log_warn "Archiving configuration:
       ├─ old: $short_dest
       └─ bak: ${short_dest}.bak"
@@ -222,6 +226,7 @@ link_config() {
 # Args:
 #   src: The file or folder to copy.
 #   dest: Where to copy it.
+#   backup: "no" to replace a different file without .bak.
 copy_config() {
     local src="$1"
     local dest="$2"
@@ -237,6 +242,12 @@ copy_config() {
     elif [ -e "$dest" ]; then
         if diff -rq "$src" "$dest" > /dev/null 2>&1; then
             log_info "Configuration already up to date: $short_dest"
+            return
+        fi
+        if [ "${3:-yes}" = "no" ]; then
+            log_warn "Replacing configuration: $short_dest"
+            rm -rf "$dest"
+            cp -R "$src" "$dest"
             return
         fi
         local backup="${dest}.bak" n=1
@@ -534,7 +545,8 @@ run_block() {
 declare -ga CONFIG_IDS=()
 declare -gA CONFIG_SOURCE=() CONFIG_TARGET=() CONFIG_DESCRIPTION=() CONFIG_BLOCK=()
 declare -gA CONFIG_PROGRAM=() CONFIG_NEEDS=() CONFIG_NEEDS_CONFIG=() CONFIG_THEN=()
-declare -gA CONFIG_COPY=() CONFIG_INTERACTIVE=()
+declare -gA CONFIG_COPY=() CONFIG_CONTENT_ONLY=() CONFIG_WITHOUT_BACKUP=() CONFIG_EXECUTABLE=()
+declare -gA CONFIG_INTERACTIVE=()
 
 # Declares a config the setup can deploy.
 #
@@ -558,7 +570,12 @@ declare -gA CONFIG_COPY=() CONFIG_INTERACTIVE=()
 #                            be repeated.
 #       --copy               Copies the config instead of linking it, for a
 #                            file edited on each machine (see copy_config).
-#       --interactive        Deploys it in the foreground instead of behind
+#       --content-only       For a folder, deploys each of its files (hidden
+#                            ones excepted) into the target folder, which
+#                            keeps its other files.
+#       --without-backup     Replaces an existing config without .bak.
+#       --executable         Makes the deployed files executable.
+#       --interactive       Deploys it in the foreground instead of behind
 #                            the spinner, for a --then function that asks
 #                            questions.
 #       --then <function>    Runs once it is deployed (e.g. installs plugins).
@@ -582,6 +599,9 @@ config() {
             --needs) CONFIG_NEEDS[$id]+="$2 "; shift ;;
             --needs-config) CONFIG_NEEDS_CONFIG[$id]+="$2 "; shift ;;
             --copy) CONFIG_COPY[$id]=1 ;;
+            --content-only) CONFIG_CONTENT_ONLY[$id]=1 ;;
+            --without-backup) CONFIG_WITHOUT_BACKUP[$id]=1 ;;
+            --executable) CONFIG_EXECUTABLE[$id]=1 ;;
             --interactive) CONFIG_INTERACTIVE[$id]=1 ;;
             --then) CONFIG_THEN[$id]="$2"; shift ;;
             *) log_error "Unknown option for config $id: $1"; exit 1 ;;
@@ -639,14 +659,41 @@ deploy_config() {
         fi
     fi
 
-    if [ -n "${CONFIG_COPY[$id]}" ]; then
-        copy_config "$source" "$HOME/${CONFIG_TARGET[$id]}"
+    if [ -n "${CONFIG_CONTENT_ONLY[$id]}" ] && [ -d "$source" ]; then
+        for entry in "$source"/*; do
+            if [ -e "$entry" ]; then
+                _deploy_entry "$id" "$entry" "$HOME/${CONFIG_TARGET[$id]}/${entry##*/}"
+            fi
+        done
     else
-        link_config "$source" "$HOME/${CONFIG_TARGET[$id]}"
+        _deploy_entry "$id" "$source" "$HOME/${CONFIG_TARGET[$id]}"
     fi
 
     if [ -n "${CONFIG_THEN[$id]}" ]; then
         "${CONFIG_THEN[$id]}"
+    fi
+}
+
+# Links or copies a file or folder of a config, as its options say.
+#
+# Args:
+#   id: The config id.
+#   src: The file or folder to deploy.
+#   dest: Where to deploy it.
+_deploy_entry() {
+    local backup="yes"
+    if [ -n "${CONFIG_WITHOUT_BACKUP[$1]}" ]; then
+        backup="no"
+    fi
+
+    if [ -n "${CONFIG_COPY[$1]}" ]; then
+        copy_config "$2" "$3" "$backup"
+    else
+        link_config "$2" "$3" "$backup"
+    fi
+
+    if [ -n "${CONFIG_EXECUTABLE[$1]}" ]; then
+        chmod +x "$3"
     fi
 }
 

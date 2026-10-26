@@ -392,10 +392,17 @@ _config_preview() {
     local id="$1"
     local added="${2:-added automatically}"
     printf '%s → ~/%s\n%s\n\n' "$id" "${CONFIG_TARGET[$id]}" "${CONFIG_DESCRIPTION[$id]}"
+    local what="${CONFIG_SOURCE[$id]}" kept="kept as .bak"
+    if [ -n "${CONFIG_CONTENT_ONLY[$id]}" ]; then
+        what="the files of $what"
+    fi
+    if [ -n "${CONFIG_WITHOUT_BACKUP[$id]}" ]; then
+        kept="replaced, without .bak"
+    fi
     if [ -n "${CONFIG_COPY[$id]}" ]; then
-        printf 'Copies %s from the repository, so your edits\nof the copy stay out of it; a different existing\nfile is kept as .bak.\n' "${CONFIG_SOURCE[$id]}"
+        printf 'Copies %s from the repository, so your edits\nof the copy stay out of it; a different existing\nfile is %s.\n' "$what" "$kept"
     else
-        printf 'Links %s from the repository; an existing config\nis kept as .bak.\n' "${CONFIG_SOURCE[$id]}"
+        printf 'Links %s from the repository; an existing config\nis %s.\n' "$what" "$kept"
     fi
     printf '\nOffered when this block runs: %s\n' "${CONFIG_BLOCK[$id]}"
     if [ -n "${CONFIG_NEEDS[$id]}" ]; then
@@ -475,9 +482,10 @@ _write_menu_scripts() {
 
     cat > "$menu/render" <<'EOF'
 #!/bin/sh
-# Prints the menu lines: id, then checkbox, indented name and description. A
-# section's checkbox shows whether all ([x]), some ([-]) or none ([ ]) of
-# its blocks are selected.
+# Prints the menu lines: id, then checkbox, indented name and description,
+# the names in a column as wide as the longest one. A section's checkbox
+# shows whether all ([x]), some ([-]) or none ([ ]) of its blocks are
+# selected.
 awk -F '\t' -v selected="$1/selected" '
     BEGIN { while ((getline id < selected) > 0) checked[id] = 1 }
     NR == FNR {
@@ -485,6 +493,7 @@ awk -F '\t' -v selected="$1/selected" '
             total[$6]++
             if (checked[$1]) chosen[$6]++
         }
+        if (length($3 "[ ] " $4) > width) width = length($3 "[ ] " $4)
         next
     }
     {
@@ -492,7 +501,7 @@ awk -F '\t' -v selected="$1/selected" '
             box = chosen[$1] == total[$1] ? "[x] " : (chosen[$1] ? "[-] " : "[ ] ")
         else
             box = checked[$1] ? "[x] " : "[ ] "
-        printf "%s\t%-30s %s\n", $1, $3 box $4, $5
+        printf "%s\t%-" width "s %s\n", $1, $3 box $4, $5
     }
 ' "$1/lines" "$1/lines"
 EOF
@@ -644,8 +653,9 @@ _write_config_menu_scripts() {
     cat > "$menu/render" <<'EOF'
 #!/bin/sh
 # Prints the menu lines: id, then the checkbox and name of a config, or the
-# name and value of a variant, under its config
-awk -F '\t' -v selected="$1/selected" -v values="$1/values" '
+# name and value of a variant, under its config. The names and the values
+# are in columns as wide as the longest name and value.
+awk -F '\t' -v selected="$1/selected" -v values="$1/values" -v options="$1/options" '
     BEGIN {
         while ((getline id < selected) > 0) checked[id] = 1
         while ((getline line < values) > 0) {
@@ -653,13 +663,23 @@ awk -F '\t' -v selected="$1/selected" -v values="$1/values" '
             value[field[1]] = field[2]
         }
     }
+    NR == FNR {
+        name = ($2 == "config" ? "[ ] " : "      ") $3
+        if (length(name) > width) width = length(name)
+        if ($2 == "variant") {
+            while ((getline option < (options "/" $1)) > 0)
+                if (length("< " option " >") > value_width) value_width = length("< " option " >")
+            close(options "/" $1)
+        }
+        next
+    }
     $2 == "config" {
-        printf "%s\t%-30s %s\n", $1, (checked[$1] ? "[x] " : "[ ] ") $3, $4
+        printf "%s\t%-" width "s %s\n", $1, (checked[$1] ? "[x] " : "[ ] ") $3, $4
     }
     $2 == "variant" {
-        printf "%s\t%-30s %-14s %s\n", $1, "      " $3, "< " value[$1] " >", $4
+        printf "%s\t%-" width "s %-" value_width "s %s\n", $1, "      " $3, "< " value[$1] " >", $4
     }
-' "$1/lines"
+' "$1/lines" "$1/lines"
 EOF
 
     cat > "$menu/toggle" <<'EOF'
