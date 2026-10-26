@@ -31,6 +31,8 @@ nnoremap <leader>q :q<CR>
 nnoremap <leader>Q :q!<CR>
 nnoremap <leader>x :x<CR>
 
+nnoremap <leader>  :Ex<CR>
+
 nnoremap <C-k> V:move '<-2<CR>gv-gv<Esc>
 nnoremap <C-j> V:move '>+1<CR>gv-gv<Esc>
 xnoremap <C-k> :move '<-2<CR>gv-gv
