@@ -1,0 +1,29 @@
+#!/bin/bash
+
+PROJECT_DIR="$HOME/School42/common-core/milestone4/pac-man"
+
+# ----------------------------
+# Utilities session
+# ----------------------------
+tmux new-session -d -s utilities -n main "w3m https://lite.duckduckgo.com"
+
+# ----------------------------
+# General session
+# ----------------------------
+tmux new-session -d -s general -n main # first window
+
+# Monitoring window with panes
+tmux new-window -t general -n monitoring "btop"
+
+# ----------------------------
+# Work session
+# ----------------------------
+tmux new-session -d -s work -n main -c "$PROJECT_DIR"
+
+# Editor window: resume the last vibe session of this project, or start a new one
+tmux new-window -t work -n editor -c "$PROJECT_DIR" "vibe --continue || vibe"
+
+# ----------------------------
+# Attach to general session
+# ----------------------------
+tmux attach -t general
