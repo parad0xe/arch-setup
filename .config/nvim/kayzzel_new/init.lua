@@ -15,3 +15,4 @@ require("config.functions")
 require("config.keymaps")
 require("config.diagnostics")
 require("config.lazy")
+require("config.appearance") -- AFTER lazy: overrides rose-pine's highlights
