@@ -63,6 +63,17 @@ return {
 		-- then snippets, then plain words found in open buffers.
 		sources = {
 			default = { "lsp", "path", "snippets", "buffer" },
+
+			providers = {
+				-- Emoji source provided by markview.nvim: typing
+				-- `:+1:`-style names suggests real emoji. The source
+				-- limits itself to markview's filetypes (markdown)
+				-- on its own, so it won't appear elsewhere.
+				markview = {
+					name = "Markview",
+					module = "blink-markview",
+				},
+			},
 		},
 
 		completion = {
