@@ -35,3 +35,16 @@ opt.hlsearch = false -- don't leave search results highlighted
 
 -- ── Clipboard ───────────────────────────────────────────────
 opt.clipboard = "unnamedplus" -- yank/paste share the system clipboard
+
+-- ── Folding ─────────────────────────────────────────────────
+-- Treesitter folding: folds are function/class blocks, from the
+-- syntax tree (needs a parser for the filetype — treesitter.lua).
+opt.foldmethod = "expr"
+opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+opt.foldlevel = 99 -- start with all folds open
+opt.foldlevelstart = 99
+opt.fillchars = { fold = " " } -- clean fold gutter
+
+-- The fold summary line is drawn by _G.custom_foldtext(),
+-- defined in lua/config/functions.lua.
+vim.opt.foldtext = "v:lua.custom_foldtext()"
