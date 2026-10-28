@@ -64,23 +64,18 @@ return {
 		sources = {
 			default = { "lsp", "path", "snippets", "buffer" },
 
-			providers = {
-				-- Emoji source provided by markview.nvim: typing
-				-- `:+1:`-style names suggests real emoji. The source
-				-- limits itself to markview's filetypes (markdown)
-				-- on its own, so it won't appear elsewhere.
-				markview = {
-					name = "Markview",
-					module = "blink-markview",
-				},
-			},
+			-- NOTE: no "markview" entry needed — current markview.nvim
+			-- registers its emoji source with blink by itself on
+			-- startup; declaring it here caused "already exists".
 		},
 
 		completion = {
-			-- Show the menu as soon as you start typing / type a
-			-- trigger character like `.` or `::`.
+			-- Show the menu as soon as you type a keyword / a trigger
+			-- character like `.` or `::`. (blink v1 names:
+			-- show_on_keyword, show_on_trigger_character — the old
+			-- show_on_insert_enter no longer exists.)
 			trigger = {
-				show_on_insert_enter = true,
+				show_on_keyword = true,
 				show_on_trigger_character = true,
 			},
 

@@ -20,7 +20,7 @@ return {
 	config = function()
 		local parsers = {
 			"bash", "c", "cpp", "diff",
-			"html", "javascript", "jsdoc", "json", "jsonc",
+			"html", "javascript", "jsdoc", "json", -- no "jsonc": the json parser covers it
 			"lua", "luadoc", "luap",
 			"make", "markdown", "markdown_inline",
 			"printf", "python", "query", "regex",

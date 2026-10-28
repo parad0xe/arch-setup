@@ -45,7 +45,7 @@ return {
 			{ "<leader>dg", "<cmd>Telescope diagnostics<cr>", desc = "Diagnostics (all buffers)" },
 
 			-- "What am I mapped to?" — search every keymap (incl. its desc)
-			{ "<leader>k", "<cmd>Telescope keymaps<cr>", desc = "Search keymaps" },
+			{ "<leader>mp", "<cmd>Telescope keymaps<cr>", desc = "Search keymaps" },
 
 			-- Git pickers (builtin; work in any git repo)
 			{ "<leader>gc", "<cmd>Telescope git_commits<cr>", desc = "Git commits (repo)" },
