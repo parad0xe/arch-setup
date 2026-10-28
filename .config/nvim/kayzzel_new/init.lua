@@ -11,6 +11,7 @@ vim.g.maplocalleader = "\\"
 -- Core: options first (sane defaults), then keymaps, then the plugin
 -- manager (which in turn loads everything in lua/plugins/).
 require("config.options")
+require("config.functions")
 require("config.keymaps")
 require("config.diagnostics")
 require("config.lazy")
