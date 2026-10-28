@@ -1,107 +1,149 @@
+-- =============================================================
+-- LSP setup: language servers give you hover docs, go-to-
+-- definition, rename, code actions, and completion data.
+--
+-- The three pieces:
+--   mason.nvim       → installs server binaries into ~/.local/share/nvim/mason/
+--   nvim-lspconfig   → ships the default config (cmd, filetypes, root dir) per server
+--   vim.lsp.config/enable (Neovim 0.11+ API) → enables servers + your overrides
+--
+-- The blink.cmp plugin provides `get_lsp_capabilities()` which
+-- tells servers what completions features we support (snippets,
+-- resolve, auto-imports). blink.cmp is loaded from its own file.
+-- =============================================================
+
 return {
-    {
-        "williamboman/mason.nvim",
-        opts = {},
-    },
-    {
-        "williamboman/mason-lspconfig.nvim",
-        dependencies = {
-            "williamboman/mason.nvim",
-            "saghen/blink.cmp",     -- needed to get capabilities
-        },
-        config = function()
-            require("mason-lspconfig").setup({
-                ensure_installed = { "lua_ls", "ts_ls", "pyright", "clangd", "rust_analyzer" },
-            })
+	{
+		"williamboman/mason.nvim",
+		opts = {},
+		config = function(_, opts)
+			require("mason").setup(opts)
 
-            local mason_bin = vim.fn.stdpath("data") .. "/mason/bin/"
+			-- Auto-install missing servers. (mason.nvim itself has no
+			-- ensure_installed option — that lived in the now-deprecated
+			-- mason-lspconfig — so we do it explicitly: refresh the
+			-- package registry, then install anything not present.)
+			local servers = {
+				"lua-language-server", -- → server "lua_ls"
+				"pyright", -- → server "pyright"
+				"typescript-language-server", -- → server "ts_ls"
+				"clangd", -- → server "clangd"
+				"rust-analyzer", -- → server "rust_analyzer"
+			}
 
-            -- ── CAPABILITIES ───────────────────────────────────────────────────
-            -- This is the critical piece for auto-import to work.
-            -- blink.cmp enhances the default LSP capabilities to tell each
-            -- server that this client supports:
-            --   - additionalTextEdits (auto-imports)
-            --   - resolveSupport (lazy-resolve full completion items)
-            --   - snippetSupport (snippet completions)
-            -- Without passing these, the LSP will never send import edits.
-            local capabilities = require("blink.cmp").get_lsp_capabilities()
+			local registry = require("mason-registry")
+			registry.refresh(function()
+				for _, name in ipairs(servers) do
+					local pkg = registry.get_package(name)
+					if not pkg:is_installed() then
+						pkg:install()
+					end
+				end
+			end)
+		end,
+	},
 
-            -- ── LSP CONFIGS ────────────────────────────────────────────────────
+	{
+		"neovim/nvim-lspconfig",
+		dependencies = { "williamboman/mason.nvim", "saghen/blink.cmp" },
+		config = function()
+			local capabilities = require("blink.cmp").get_lsp_capabilities()
+			local get_python_path = require("config.python").get_python_path
 
-            vim.lsp.config("lua_ls", {
-                cmd          = { mason_bin .. "lua-language-server" },
-                filetypes    = { "lua" },
-                capabilities = capabilities,
-                settings     = {
-                    Lua = {
-                        diagnostics = { globals = { "vim" } },
-                        workspace   = { checkThirdParty = false },
-                        telemetry   = { enable = false },
-                    },
-                },
-            })
+			-- ── Per-server settings ────────────────────────────────
+			-- vim.lsp.config(<name>, {...}) overrides the defaults
+			-- shipped by nvim-lspconfig; `capabilities` is the part
+			-- that lets blink.cmp complete from this server.
 
-            vim.lsp.config("pyright", {
-                cmd          = { mason_bin .. "pyright-langserver", "--stdio" },
-                filetypes    = { "python" },
-                capabilities = capabilities,
+			vim.lsp.config("lua_ls", {
+				capabilities = capabilities,
+				settings = {
+					Lua = {
+						-- `vim` is a global in config files; without this
+						-- lua_ls flags every `vim.xxx` as undefined.
+						diagnostics = { globals = { "vim" } },
+						workspace = { checkThirdParty = false },
+						telemetry = { enable = false },
+					},
+				},
+			})
+
+			vim.lsp.config("pyright", {
+				capabilities = capabilities,
 				on_init = function(client)
+					-- Point pyright at the project venv (same detection mypy uses).
 					client.config.settings.python.pythonPath = get_python_path()
 				end,
-                settings     = {
-                    python = {
-                        analysis = {
-                            -- auto-import completions in pyright
-                            autoImportCompletions = true,
-                            typeCheckingMode      = "basic",
-                        },
-                    },
-                },
-            })
+				settings = {
+					python = {
+						analysis = {
+							autoImportCompletions = true,
+							typeCheckingMode = "basic",
+						},
+					},
+				},
+			})
 
-            vim.lsp.config("ts_ls", {
-                cmd          = { mason_bin .. "typescript-language-server", "--stdio" },
-                filetypes    = { "javascript", "typescript", "javascriptreact", "typescriptreact" },
-                capabilities = capabilities,
-                settings     = {
-                    typescript = {
-                        preferences = {
-                            -- auto-import style for TypeScript
-                            importModuleSpecifier = "relative",
-                        },
-                    },
-                    javascript = {
-                        preferences = {
-                            importModuleSpecifier = "relative",
-                        },
-                    },
-                },
-            })
+			vim.lsp.config("ts_ls", {
+				capabilities = capabilities,
+				settings = {
+					typescript = { preferences = { importModuleSpecifier = "relative" } },
+					javascript = { preferences = { importModuleSpecifier = "relative" } },
+				},
+			})
 
-            vim.lsp.config("clangd", {
-                cmd          = { mason_bin .. "clangd", "--background-index", "--clang-tidy" },
-                filetypes    = { "c", "cpp", "objc", "objcpp" },
-                capabilities = capabilities,
-            })
+			vim.lsp.config("clangd", {
+				capabilities = capabilities,
+				-- Background index = jump-to-def works across files
+				-- without opening them first; clang-tidy = extra checks.
+				cmd = { "clangd", "--background-index", "--clang-tidy" },
+			})
 
-            vim.lsp.config("rust_analyzer", {
-                cmd          = { mason_bin .. "rust-analyzer" },
-                filetypes    = { "rust" },
-                capabilities = capabilities,
-                settings     = {
-                    ["rust-analyzer"] = {
-                        imports = {
-                            -- auto-import style for Rust
-                            granularity = { group = "module" },
-                            prefix      = "self",
-                        },
-                        cargo    = { allFeatures = true },
-                        procMacro = { enable = true },
-                    },
-                },
-            })
+			vim.lsp.config("rust_analyzer", {
+				capabilities = capabilities,
+				settings = {
+					["rust-analyzer"] = {
+						imports = {
+							granularity = { group = "module" },
+							prefix = "self",
+						},
+						cargo = { allFeatures = true },
+						procMacro = { enable = true },
+					},
+				},
+			})
 
-            vim.lsp.enable({ "lua_ls", "pyright", "ts_ls", "clangd", "rust_analyzer" })
-        end,
-    },
+			-- Enable the servers on their filetypes (from the nvim-
+			-- lspconfig defaults; the cmds are found via mason's PATH).
+			vim.lsp.enable({ "lua_ls", "pyright", "ts_ls", "clangd", "rust_analyzer" })
+
+			-- ── LSP keymaps ───────────────────────────────────────
+			-- Set only when a server actually attaches to the buffer,
+			-- so they exist only where they do something. The listy
+			-- ones use telescope's pickers (fuzzy filter + preview).
+			vim.api.nvim_create_autocmd("LspAttach", {
+				callback = function(ev)
+					local map = function(lhs, rhs, desc)
+						vim.keymap.set("n", lhs, rhs, { buffer = ev.buf, desc = desc })
+					end
+					local tscope = require("telescope.builtin")
+
+					map("gd", tscope.lsp_definitions, "Go to definition")
+					map("gi", tscope.lsp_implementations, "Go to implementation")
+					map("K", vim.lsp.buf.hover, "Show documentation")
+					map("grn", vim.lsp.buf.rename, "Rename symbol")
+					map("gra", vim.lsp.buf.code_action, "Code action")
+					map("grr", tscope.lsp_references, "List references")
+
+					-- Prefer LSP folding when the server supports it;
+					-- otherwise the window keeps the treesitter
+					-- foldexpr from options.lua.
+					local client = vim.lsp.get_client_by_id(ev.data.client_id)
+					if client and client:supports_method("textDocument/foldingRange") then
+						vim.wo[vim.api.nvim_get_current_win()].foldexpr = "v:lua.vim.lsp.foldexpr()"
+					end
+				end,
+			})
+		end,
+	},
 }
