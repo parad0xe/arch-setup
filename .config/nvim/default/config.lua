@@ -3,6 +3,7 @@ vim.g.loaded_netrwPlugin = 1
 vim.opt.termguicolors = true
 
 require('config.functions')
+require('config.options')
 require('config.keymaps')
 
 -- Navigation
