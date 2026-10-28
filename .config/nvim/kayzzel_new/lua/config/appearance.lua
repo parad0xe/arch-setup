@@ -17,9 +17,9 @@ local function apply_overrides()
 	-- Keep the cursorline indicator, but no colored band.
 	hl(0, "CursorLine", { bg = "none" })
 
-	-- Current line number in purple (bd93f9 = readable bright
-	-- purple; the old config's #8024ca is darker/less legible).
-	hl(0, "CursorLineNr", { fg = "#bd93f9" })
+	-- Current line number: purple + bold (bd93f9 = readable
+	-- bright purple; the old config's #8024ca is less legible).
+	hl(0, "CursorLineNr", { fg = "#bd93f9", bold = true })
 
 	-- Purple semi-transparent visual selection — the same
 	-- #6c4791 as the blink.cmp selection background, so the
