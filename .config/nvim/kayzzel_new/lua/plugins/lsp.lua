@@ -119,19 +119,29 @@ return {
 
 			-- ── LSP keymaps ───────────────────────────────────────
 			-- Set only when a server actually attaches to the buffer,
-			-- so they exist only where they do something.
+			-- so they exist only where they do something. The listy
+			-- ones use telescope's pickers (fuzzy filter + preview).
 			vim.api.nvim_create_autocmd("LspAttach", {
 				callback = function(ev)
 					local map = function(lhs, rhs, desc)
 						vim.keymap.set("n", lhs, rhs, { buffer = ev.buf, desc = desc })
 					end
+					local tscope = require("telescope.builtin")
 
-					map("gd", vim.lsp.buf.definition, "Go to definition")
-					map("gi", vim.lsp.buf.implementation, "Go to implementation")
+					map("gd", tscope.lsp_definitions, "Go to definition")
+					map("gi", tscope.lsp_implementations, "Go to implementation")
 					map("K", vim.lsp.buf.hover, "Show documentation")
 					map("grn", vim.lsp.buf.rename, "Rename symbol")
 					map("gra", vim.lsp.buf.code_action, "Code action")
-					map("grr", vim.lsp.buf.references, "List references")
+					map("grr", tscope.lsp_references, "List references")
+
+					-- Prefer LSP folding when the server supports it;
+					-- otherwise the window keeps the treesitter
+					-- foldexpr from options.lua.
+					local client = vim.lsp.get_client_by_id(ev.data.client_id)
+					if client and client:supports_method("textDocument/foldingRange") then
+						vim.wo[vim.api.nvim_get_current_win()].foldexpr = "v:lua.vim.lsp.foldexpr()"
+					end
 				end,
 			})
 		end,

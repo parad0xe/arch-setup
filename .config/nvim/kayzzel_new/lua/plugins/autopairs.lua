@@ -16,7 +16,9 @@ return {
 		-- pick the end point with the highlighted key, done.
 		fast_wrap = {},
 
-		-- LATER (needs nvim-treesitter): check_ts = true prevents
-		-- pairing inside strings and comments.
+		-- Treesitter-aware pairing: don't insert a second quote when
+		-- you're already INSIDE a string (needs the parsers from
+		-- treesitter.lua, default rules cover lua/python/js/etc.).
+		check_ts = true,
 	},
 }
