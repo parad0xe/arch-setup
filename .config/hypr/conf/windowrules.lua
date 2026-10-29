@@ -11,3 +11,13 @@ hl.window_rule({
     size   = "1100 700",
     center = true,
 })
+
+-- The music player (rmpc), opened by scripts/system/music.sh in a Ghostty
+-- window of its own class, floats centered like the connectivity managers.
+hl.window_rule({
+    name   = "music_float",
+    match  = { class = "^ghostty\\.rmpc$" },
+    float  = true,
+    size   = "1200 800",
+    center = true,
+})
