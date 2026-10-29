@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+#
+# getmusic — download music with yt-dlp and process it into the MPD library with beets.
+#
+# Usage:
+#   getmusic <url>...        Download and auto-import (best for albums and single tracks)
+#   getmusic -t <url>...     Import tracks as individual singles (best for mixed-artist playlists)
+#   getmusic -i <url>...     Interactive: you pick the correct release on ambiguous matches
+#   getmusic inbox [-i|-t]   Re-run the import on files left in the inbox
+#   getmusic list            Show leftover inbox files
+#   getmusic clean           Empty the inbox (asks for confirmation)
+#
+# Works with anything yt-dlp supports: YouTube / YouTube Music, SoundCloud,
+# Bandcamp, archive.org, Vimeo, ... (full list: yt-dlp --list-extractors)
+
+set -u
+
+INBOX="${HOME}/.local/share/getmusic/inbox"
+
+usage() { sed -n '2,16p' "$0" | tr -s '#' ' ' ; exit "${1:-0}"; }
+
+singleton=0
+interactive=0
+while getopts ":tih" opt; do
+    case $opt in
+        t) singleton=1 ;;
+        i) interactive=1 ;;
+        h|*) usage 0 ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+mkdir -p "$INBOX"
+
+beet_import() {
+    local flags=()
+    (( singleton )) && flags+=( -t )
+    (( interactive )) || flags+=( -q )
+    beet import "${flags[@]}" "$1"
+    # Fallback for what MusicBrainz can't confidently match:
+    # import as-is, keeping the metadata embedded by the download source.
+    if (( ! interactive )); then
+        local left
+        left=$(find_audio | wc -l)
+        if (( left > 0 )); then
+            echo "==> $left file(s) unmatched - importing as-is (keeping embedded metadata)"
+            local aflags=( -A -q )
+            (( singleton )) && aflags+=( -t )
+            beet import "${aflags[@]}" "$1" || true
+        fi
+    fi
+}
+
+# List only actual audio files in the inbox (thumbnails etc. excluded)
+find_audio() {
+    find "$INBOX" -type f \( \
+        -iname '*.mp3'  -o -iname '*.flac' -o -iname '*.m4a'  -o -iname '*.aac' \
+        -o -iname '*.opus' -o -iname '*.ogg' -o -iname '*.wav'  -o -iname '*.wma' \
+        -o -iname '*.aif' -o -iname '*.aiff' \
+    \) "$@"
+}
+
+case "${1:-}" in
+    list)
+        find "$INBOX" -type f -printf "   %P\n"
+        exit 0
+        ;;
+    clean)
+        read -rp "Delete ALL files in $INBOX? [y/N] " ans
+        if [[ ${ans:-n} == [Yy]* ]]; then
+            rm -rf "$INBOX" && echo "Inbox emptied."
+        else
+            echo "Aborted, nothing deleted."
+        fi
+        exit 0
+        ;;
+    inbox)
+        shift
+        while getopts ":tih" opt; do
+            case $opt in
+                t) singleton=1 ;;
+                i) interactive=1 ;;
+                h|*) usage 0 ;;
+            esac
+        done
+        beet_import "$INBOX"
+        exit 0
+        ;;
+    "") usage 1 ;;
+esac
+
+echo "==> Downloading..."
+paths_file=$(mktemp)
+yt-dlp \
+    -x \
+    --ignore-errors \
+    --no-update \
+    --embed-metadata \
+    --embed-thumbnail \
+    --print-to-file "after_move:filepath" "$paths_file" \
+    -o "$INBOX/%(playlist_title|Singles)s/%(title)s.%(ext)s" \
+    "$@"
+echo
+
+# Thumbnails left over from failed downloads are junk in the inbox
+find "$INBOX" -type f \( -iname '*.webp' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) -delete
+find "$INBOX" -mindepth 1 -type d -empty -delete
+
+# Embed track numbers (in download order) and album artist where missing:
+# YouTube Music albums carry neither, and beets needs both for album matching.
+python3 - "$paths_file" <<'PYEOF'
+import collections, sys
+from mutagen import File
+audio = ('.mp3', '.flac', '.m4a', '.aac', '.opus', '.ogg', '.wav', '.wma', '.aiff')
+with open(sys.argv[1]) as fh:
+    paths = [l.strip() for l in fh if l.strip().lower().endswith(audio)]
+totals = collections.Counter(p.rsplit('/', 1)[0] for p in paths)
+seen = collections.Counter()
+tagged = 0
+for p in paths:
+    try:
+        f = File(p, easy=True)
+    except Exception:
+        continue
+    if f is None:
+        continue
+    folder, changed = p.rsplit('/', 1)[0], False
+    seen[folder] += 1
+    if totals[folder] > 1 and not f.get('tracknumber'):
+        f['tracknumber'] = str(seen[folder]); changed = True
+    if f.get('artist') and not f.get('albumartist'):
+        f['albumartist'] = f['artist']; changed = True
+    if changed:
+        try:
+            f.save(); tagged += 1
+        except Exception:
+            pass
+if tagged:
+    print(f"==> Tagged track numbers/album artist on {tagged} file(s)")
+PYEOF
+rm -f "$paths_file"
+
+audio=$(find_audio | wc -l)
+if (( audio == 0 )); then
+    echo "!! No audio files in the inbox - the download failed (see errors above)."
+    echo "   Fixes to try: sudo pacman -Syu     (refresh yt-dlp)"
+    echo "                sudo pacman -S deno   (JS runtime required for YouTube)"
+    exit 1
+fi
+
+echo "==> Importing into beets / MPD library..."
+beet_import "$INBOX"
+echo
+
+left=$(find_audio | wc -l)
+if (( left > 0 )); then
+    echo "!! $left file(s) could not be auto-matched and remain in the inbox:"
+    find_audio -printf "   %P\n" | head -20
+    echo "   Pick releases yourself with: getmusic inbox -i"
+else
+    echo "OK - inbox empty, everything was imported. MPD library updated automatically."
+fi
