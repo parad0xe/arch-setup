@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use model::{InputValue, Plan, Reason, Registry, Selection, Unit, plan};
+use model::{InputValue, Module, Plan, Reason, Registry, Selection, Unit, plan};
 
 /// How a unit stands in the selection.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -123,8 +123,46 @@ pub(crate) fn implied(registry: &Registry, selection: &Selection) -> BTreeMap<St
         .collect()
 }
 
-/// The rows of the units screen: a band per module, its offered units with
-/// the parts under their parent; for the files alone, the units with files.
+/// The units of a module's band on the units screen, each with its place in
+/// the tree: the module's top-level units, each followed by its parts (from
+/// any module: a private part sits under its public parent), then the
+/// module's parts whose parent is not shown (it always runs). For the files
+/// alone, the units with files.
+pub(crate) fn band<'a>(
+    registry: &'a Registry,
+    module: &'a Module,
+    files_only: bool,
+) -> Vec<(&'a Unit, Tree)> {
+    let shown = |u: &Unit| u.offered() && (!files_only || !u.files().is_empty());
+    let mut band = Vec::new();
+    for unit in module
+        .units()
+        .iter()
+        .filter(|u| shown(u) && u.parent().is_none())
+    {
+        band.push((unit, Tree::None));
+        let parts: Vec<&Unit> = registry.parts(unit.id()).filter(|p| shown(p)).collect();
+        for (i, part) in parts.iter().enumerate() {
+            let tree = if i + 1 == parts.len() {
+                Tree::Last
+            } else {
+                Tree::Middle
+            };
+            band.push((part, tree));
+        }
+    }
+    for part in module.units().iter().filter(|u| {
+        shown(u)
+            && u.parent()
+                .is_some_and(|parent| !registry.unit(parent).is_some_and(shown))
+    }) {
+        band.push((part, Tree::None));
+    }
+    band
+}
+
+/// The rows of the units screen: a band per module with its units (see
+/// `band`), marked selected or added.
 pub(crate) fn units(registry: &Registry, selection: &Selection, files_only: bool) -> Vec<Row> {
     let implied = implied(registry, selection);
     let mark = |id: &str| {
@@ -138,64 +176,30 @@ pub(crate) fn units(registry: &Registry, selection: &Selection, files_only: bool
     };
     let mut rows = Vec::new();
     for module in registry.modules() {
-        let offered: Vec<&Unit> = module
-            .units()
-            .iter()
-            .filter(|u| u.offered() && (!files_only || !u.files().is_empty()))
-            .collect();
-        if offered.is_empty() {
+        let band = band(registry, module, files_only);
+        if band.is_empty() {
             continue;
         }
-        let selected = offered
+        let selected = band
             .iter()
-            .filter(|u| selection.contains(u.id()))
+            .filter(|(u, _)| selection.contains(u.id()))
             .count();
-        let added = offered
+        let added = band
             .iter()
-            .filter(|u| !selection.contains(u.id()) && implied.contains_key(u.id()))
+            .filter(|(u, _)| !selection.contains(u.id()) && implied.contains_key(u.id()))
             .count();
         rows.push(Row::Section {
             id: module.id().to_string(),
             name: module.name().to_string(),
             selected,
-            total: offered.len(),
+            total: band.len(),
             added,
         });
-        // Top-level units in order, each followed by its offered parts
-        for unit in offered.iter().filter(|u| u.parent().is_none()) {
-            rows.push(Row::Unit {
-                id: unit.id().to_string(),
-                tree: Tree::None,
-                mark: mark(unit.id()),
-            });
-            let parts: Vec<&&Unit> = offered
-                .iter()
-                .filter(|p| p.parent() == Some(unit.id()))
-                .collect();
-            for (i, part) in parts.iter().enumerate() {
-                let tree = if i + 1 == parts.len() {
-                    Tree::Last
-                } else {
-                    Tree::Middle
-                };
-                rows.push(Row::Unit {
-                    id: part.id().to_string(),
-                    tree,
-                    mark: mark(part.id()),
-                });
-            }
-        }
-        // Offered parts whose parent is not offered (it always runs)
-        for part in offered.iter().filter(|p| {
-            p.parent()
-                .is_some_and(|parent| !offered.iter().any(|u| u.id() == parent))
-        }) {
-            rows.push(Row::Unit {
-                id: part.id().to_string(),
-                tree: Tree::None,
-                mark: mark(part.id()),
-            });
-        }
+        rows.extend(band.iter().map(|(unit, tree)| Row::Unit {
+            id: unit.id().to_string(),
+            tree: *tree,
+            mark: mark(unit.id()),
+        }));
     }
     rows
 }

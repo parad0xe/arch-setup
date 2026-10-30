@@ -50,7 +50,7 @@ and runs a hook, in this order.
 | `id`       | string, required     | Unique across all modules. `^[a-z][a-z0-9-]*$`.                          |
 | `name`     | string, required     | One line, shown in the lists.                                           |
 | `about`    | string               | A paragraph, shown in the details.                                      |
-| `parent`   | unit id              | The unit is a part of that unit of the same module (shown in its tree). |
+| `parent`   | unit id              | The unit is a part of that unit, of the same module or of one read before (shown in its tree). |
 | `always`   | bool                 | Runs in every run, first. Never offered.                                |
 | `attended` | bool                 | Its hook runs a tool that needs the terminal (a security key asking for its PIN). Skipped without one, or with `--yes`. |
 | `when`     | table                | Conditions on the machine; all must hold. See Conditions.               |
@@ -82,7 +82,8 @@ units screen these parts pick like radio buttons. In a profile, a pattern
 (`*`) keeps the default and a name picks: `units = ["*", "fish"]` means
 fish. A part of a choice usually `requires` its parent, so that picking it
 brings the shared pieces along. The parts of a choice are parts of the unit
-(same module, `parent` set), at least two, not `required` by the unit.
+(`parent` set), at least two, not `required` by the unit. A module read
+after may add parts to it (see Fragments).
 
 ### Conditions
 
@@ -283,6 +284,17 @@ hooks = ["announce_work"]                  # a function of this module's hooks.s
 [[unit]]
 extend = "terminal"
 variants = [{ id = "zshrc", options = ["work"], default = "work" }]   # more options for a variant of the unit
+
+[[unit]]
+id = "nushell"                             # a part of the public shell, declared here
+parent = "shell"
+requires = ["shell"]
+packages = ["nushell"]
+files = [{ source = "files/nushell", target = ".config/nushell" }]
+
+[[unit]]
+extend = "shell"
+choice = { parts = ["nushell"], default = "nushell" }   # one more shell to pick, the new default
 ```
 
 `extend` adds to the unit: packages, `aur`, services, inputs, variants and
@@ -300,10 +312,21 @@ files name: for `files/zshrc/{zshrc}.zsh`, the `work` option is
 `files/zshrc/work.zsh` of the fragment's module. An option the unit already
 has is refused.
 
+A fragment may change the `choice` of the unit. With `extend`, its `parts`
+join the choice, which the unit must have, and its `default`, when given,
+becomes the choice's. An added part is a unit of the fragment's module with
+`parent` set to the unit: a part may have its parent in a module read
+before, and the units screen shows it under that parent, in the band of the
+parent's module. Above, `shell` offers `zsh`, `fish` and `nushell`, and
+`nushell` comes with it unless another is picked.
+
 `override` replaces the configuration of the unit: its files, variants,
 inputs and hooks are the fragment's, and only them. The packages, `aur`
 packages and services stay those of the unit (and the fragment may add
 some): replacing the Hyprland config does not drop the `hyprland` package.
+Its `choice`, when given, replaces the unit's in full, `default` required;
+without one the unit keeps its choice, since its parts are units, not
+configuration.
 
 The sources of a fragment's files are read in the fragment's module
 folder, its hooks in its `hooks.sh`; `SETUP_MODULE_ROOT` names that folder
@@ -415,7 +438,7 @@ Reading the manifests fails, with the file and line, when:
 
 - an `id` is malformed or declared twice (units across modules, variants
   and inputs within a unit);
-- `parent` names a unit of another module, the unit itself, or a part;
+- `parent` names a unit of a module read after, the unit itself, or a part;
 - `requires` or `after` names an unknown unit;
 - `when` uses an unknown fact, or a value of the wrong type;
 - a package or service name is empty or repeated;
@@ -438,8 +461,10 @@ Reading the manifests fails, with the file and line, when:
   module, or a unit another module already overrides; it adds an option a
   variant already has, or a new variant without a name, or an option whose
   file is missing from its module;
-- a `choice` has fewer than two parts, names a unit that is not a part of
-  the unit, a default outside its parts, or a part the unit `requires`;
+- a `choice` has fewer than two parts, no default on a unit, names a unit
+  that is not a part of the unit, a default outside its parts, or a part the
+  unit `requires`; a fragment adds parts to a unit without a choice or a part
+  the choice already has, or an `override` gives a choice without a default;
 - a unit declares nothing to do.
 
 A profile fails when `extends` is unknown or cyclic, or when a variant or

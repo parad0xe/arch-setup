@@ -65,6 +65,8 @@ pub enum RepoError {
     },
     #[error("{path}: unit {unit}: the name is missing")]
     MissingName { path: PathBuf, unit: String },
+    #[error("{path}: unit {unit}: the choice has no default")]
+    ChoiceDefault { path: PathBuf, unit: String },
     #[error("{path}: unit {unit}: the permissions {value} are not octal digits (600, 755...)")]
     Permissions {
         path: PathBuf,

@@ -183,7 +183,7 @@ the first screen: an HTTPS URL is cloned into
 `~/.local/share/arch-setup/private` with a token asked on the terminal and
 handed to git alone, nothing written; a folder (a USB key) is used in
 place. Its units and profiles add up to the public ones, its modules may
-extend a public unit (more files, a variant of their own, a hook) or
+extend a public unit (more files, a variant or a shell of their own, a hook) or
 replace its configuration, and the setup remembers it for the next
 launches.
 

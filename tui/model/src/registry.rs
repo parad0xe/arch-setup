@@ -32,8 +32,8 @@ pub enum RegistryError {
     UnitName(String),
     #[error("unit {unit}: unknown parent {parent}")]
     UnknownParent { unit: String, parent: String },
-    #[error("unit {unit}: its parent {parent} is in another module")]
-    ParentInOtherModule { unit: String, parent: String },
+    #[error("unit {unit}: its parent {parent} is in a module read after")]
+    ParentInLaterModule { unit: String, parent: String },
     #[error("unit {0}: is its own parent")]
     SelfParent(String),
     #[error("unit {unit}: its parent {parent} is itself a part")]
@@ -133,6 +133,10 @@ pub enum RegistryError {
     ChoiceDefault { unit: String, default: String },
     #[error("unit {unit}: requires {part}, one of the parts of its choice")]
     ChoiceRequired { unit: String, part: String },
+    #[error("module {module}: adds parts to the choice of {unit}, which has none")]
+    NoChoice { module: String, unit: String },
+    #[error("unit {unit}: the choice {module} gives it has no default")]
+    ChoiceWithoutDefault { unit: String, module: String },
 }
 
 /// A hook of a unit: the function, and the folder of the module whose
@@ -167,7 +171,8 @@ impl Merged {
 
     /// Applies a fragment of `module`. Its file sources become absolute,
     /// its hooks remember their module, and so do the options it adds to
-    /// the unit's variants.
+    /// the unit's variants. Its parts join the choice of the unit, or
+    /// replace it.
     fn apply(
         &mut self,
         fragment: &Fragment,
@@ -224,6 +229,27 @@ impl Merged {
                 self.decl.hooks.extend(fragment.hooks.iter().cloned());
                 self.hook_roots
                     .extend(std::iter::repeat_n(root.clone(), fragment.hooks.len()));
+                if let Some(change) = &fragment.choice {
+                    let Some(choice) = &mut self.decl.choice else {
+                        return Err(RegistryError::NoChoice {
+                            module: module.id.clone(),
+                            unit: self.decl.id.clone(),
+                        });
+                    };
+                    for part in &change.parts {
+                        if choice.parts.contains(part) {
+                            return Err(RegistryError::Repeated {
+                                unit: self.decl.id.clone(),
+                                list: "choice parts",
+                                name: part.clone(),
+                            });
+                        }
+                        choice.parts.push(part.clone());
+                    }
+                    if let Some(default) = &change.default {
+                        choice.default = default.clone();
+                    }
+                }
             }
             Merge::Override => {
                 self.decl.files = fragment.files.iter().map(absolute).collect();
@@ -232,6 +258,20 @@ impl Merged {
                 self.decl.hooks = fragment.hooks.clone();
                 self.hook_roots = vec![root.clone(); fragment.hooks.len()];
                 self.option_roots.clear();
+                // The choice stays unless the fragment gives another: its
+                // parts are units, not configuration
+                if let Some(change) = &fragment.choice {
+                    let Some(default) = &change.default else {
+                        return Err(RegistryError::ChoiceWithoutDefault {
+                            unit: self.decl.id.clone(),
+                            module: module.id.clone(),
+                        });
+                    };
+                    self.decl.choice = Some(Choice {
+                        parts: change.parts.clone(),
+                        default: default.clone(),
+                    });
+                }
             }
         }
         self.extended_by.push(module.id.clone());
@@ -532,8 +572,10 @@ impl Registry {
                 if parent == unit.id() {
                     return Err(RegistryError::SelfParent(unit.id().into()));
                 }
-                if parent_unit.module() != unit.module() {
-                    return Err(RegistryError::ParentInOtherModule {
+                // The parent is in the same module, or in one read before:
+                // a private part under a public unit
+                if self.index[parent].0 > self.index[unit.id()].0 {
+                    return Err(RegistryError::ParentInLaterModule {
                         unit: unit.id().into(),
                         parent: parent.into(),
                     });
@@ -1018,6 +1060,7 @@ pub(crate) mod tests {
             variants: Vec::new(),
             inputs: Vec::new(),
             hooks: Vec::new(),
+            choice: None,
         }
     }
 
@@ -1373,6 +1416,173 @@ pub(crate) mod tests {
         app.files.clear();
         app.variants.clear();
         let _ = app;
+    }
+
+    #[test]
+    fn a_fragment_adds_parts_to_a_choice_or_replaces_it() {
+        use crate::declarations::ChoiceChange;
+        let platform = Platform {
+            distro: "arch".into(),
+            arch: "x86_64".into(),
+            ..Default::default()
+        };
+        let part = |id: &str| UnitDeclaration {
+            id: id.into(),
+            name: id.to_uppercase(),
+            parent: Some("shell".into()),
+            requires: vec!["shell".into()],
+            packages: vec![Package {
+                name: id.into(),
+                when: None,
+            }],
+            ..Default::default()
+        };
+        let shell = UnitDeclaration {
+            id: "shell".into(),
+            name: "Shell".into(),
+            packages: vec![Package {
+                name: "starship".into(),
+                when: None,
+            }],
+            choice: Some(Choice {
+                parts: vec!["zsh".into(), "fish".into()],
+                default: "zsh".into(),
+            }),
+            ..Default::default()
+        };
+        let term = module("term", vec![shell.clone(), part("zsh"), part("fish")]);
+        let mut extend = fragment("shell", Merge::Extend);
+        extend.choice = Some(ChoiceChange {
+            parts: vec!["nushell".into()],
+            default: Some("nushell".into()),
+        });
+        // The part is a unit of the private module, under the public parent
+        let mut work = module("work", vec![part("nushell")]);
+        work.fragments = vec![extend.clone()];
+        let reg = Registry::new(
+            Declarations {
+                modules: vec![term.clone(), work.clone()],
+            },
+            &platform,
+        )
+        .unwrap();
+        let choice = reg.unit("shell").unwrap().choice().unwrap();
+        assert_eq!(choice.parts, ["zsh", "fish", "nushell"]);
+        assert_eq!(choice.default, "nushell");
+        assert_eq!(reg.choice_of("nushell").map(|(u, _)| u.id()), Some("shell"));
+        assert_eq!(
+            reg.parts("shell").map(Unit::id).collect::<Vec<_>>(),
+            ["zsh", "fish", "nushell"]
+        );
+        let mut selection = Selection::new();
+        selection.select("shell");
+        let plan = crate::plan::build(&reg, &selection);
+        let units: Vec<&str> = plan.steps().iter().map(|s| s.unit()).collect();
+        assert_eq!(
+            units,
+            ["shell", "nushell"],
+            "the new default comes with shell"
+        );
+        assert_eq!(
+            plan.step("nushell").unwrap().reason(),
+            &Reason::DefaultOf("shell".into())
+        );
+
+        // The default alone, the parts untouched
+        work.fragments[0].choice = Some(ChoiceChange {
+            parts: Vec::new(),
+            default: Some("fish".into()),
+        });
+        let reg = Registry::new(
+            Declarations {
+                modules: vec![term.clone(), work.clone()],
+            },
+            &platform,
+        )
+        .unwrap();
+        let choice = reg.unit("shell").unwrap().choice().unwrap();
+        assert_eq!((choice.parts.len(), choice.default.as_str()), (2, "fish"));
+        assert!(
+            reg.unit("nushell").unwrap().offered() && reg.choice_of("nushell").is_none(),
+            "a part outside the choice is an optional part"
+        );
+
+        // Override: the choice in full, or the unit's when none is given
+        let mut replace = fragment("shell", Merge::Override);
+        replace.choice = Some(ChoiceChange {
+            parts: vec!["nushell".into(), "fish".into()],
+            default: Some("fish".into()),
+        });
+        work.fragments = vec![replace.clone()];
+        let reg = Registry::new(
+            Declarations {
+                modules: vec![term.clone(), work.clone()],
+            },
+            &platform,
+        )
+        .unwrap();
+        let choice = reg.unit("shell").unwrap().choice().unwrap();
+        assert_eq!(choice.parts, ["nushell", "fish"]);
+        assert!(reg.choice_of("zsh").is_none());
+        work.fragments[0].choice = None;
+        let reg = Registry::new(
+            Declarations {
+                modules: vec![term.clone(), work.clone()],
+            },
+            &platform,
+        )
+        .unwrap();
+        assert_eq!(
+            reg.unit("shell").unwrap().choice().unwrap().parts,
+            ["zsh", "fish"]
+        );
+
+        // The mistakes
+        let err = |work: ModuleDeclaration| {
+            Registry::new(
+                Declarations {
+                    modules: vec![term.clone(), work],
+                },
+                &platform,
+            )
+            .unwrap_err()
+        };
+        let mut nodefault = work.clone();
+        nodefault.fragments = vec![replace.clone()];
+        nodefault.fragments[0].choice.as_mut().unwrap().default = None;
+        assert!(matches!(
+            err(nodefault),
+            RegistryError::ChoiceWithoutDefault { .. }
+        ));
+        let mut again = work.clone();
+        again.fragments = vec![extend.clone()];
+        again.fragments[0].choice.as_mut().unwrap().parts = vec!["fish".into()];
+        assert!(matches!(
+            err(again),
+            RegistryError::Repeated {
+                list: "choice parts",
+                ..
+            }
+        ));
+        let mut choiceless = work.clone();
+        choiceless.fragments = vec![extend.clone()];
+        choiceless.fragments[0].unit = "zsh".into();
+        choiceless.units[0].parent = Some("zsh".into());
+        assert!(matches!(err(choiceless), RegistryError::NoChoice { .. }));
+        let mut late = term.clone();
+        late.units.push(part("nushell"));
+        late.units.last_mut().unwrap().parent = Some("later".into());
+        let later = module("work", vec![unit("later")]);
+        assert!(matches!(
+            Registry::new(
+                Declarations {
+                    modules: vec![late, later],
+                },
+                &platform
+            )
+            .unwrap_err(),
+            RegistryError::ParentInLaterModule { .. }
+        ));
     }
 
     /// Two modules: alpha (base, always; quick; slow requires quick; arm

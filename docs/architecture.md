@@ -125,12 +125,14 @@ Invariants:
 
 - A unit id is unique across modules; a variant or input id within its
   unit; every variant is used by a file; every `{placeholder}` names a
-  variant; `parent`, `requires` and `after` name known units, without cycle.
+  variant; `parent`, `requires` and `after` name known units, without cycle;
+  a part's parent is in its module or in one read before.
 - Fragments apply at the declaration level before validation (`Merged`):
   a fragment's file sources become absolute, its hooks remember their
   module (`HookRun { function, module_root }`), the options it adds to a
-  variant remember theirs (`Unit::option_root`). A fragment names a unit
-  of a module read before, never of its own; one override per unit.
+  variant remember theirs (`Unit::option_root`); its `choice` adds parts to
+  the unit's, or replaces it with `override`. A fragment names a unit of a
+  module read before, never of its own; one override per unit.
 - `Unit` exposes what applies to the machine only: `packages()`, `aur()`,
   `hooks()`, `hook_runs()`, `available()`, `offered()`, `extended_by()`.
   `Condition::holds` is the one place that knows the platform properties.
@@ -246,8 +248,8 @@ binary writes the profile and fetches the private repository.
 
 Screens, in order: Profile (the machine, an unfinished run, the private
 repository, `none`, the profiles), Units (a band per module, parts under
-their parent, selected and required marks; for the files alone, the units
-with files), Variants (every variant of the planned units, the required
+their parent whatever their module, selected and required marks; for the
+files alone, the units with files), Variants (every variant of the planned units, the required
 ones included), Answers (text, secret, yes/no, choice), Summary (the steps
 with their reason, the units left out). A screen with nothing to show is
 skipped; Esc goes back the same way.

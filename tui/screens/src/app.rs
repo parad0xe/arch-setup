@@ -455,17 +455,19 @@ impl<'a> App<'a> {
         };
         match row {
             Row::Section { id, .. } if self.screen == Screen::Units => {
+                // The units of the band; of exclusive parts, the default alone
                 let ids: Vec<String> = self
                     .registry
-                    .units()
-                    .filter(|u| u.module() == id && u.offered() && self.deployable(u.id()))
-                    // Of exclusive parts, the default alone
-                    .filter(|u| {
+                    .modules()
+                    .iter()
+                    .filter(|m| m.id() == id)
+                    .flat_map(|m| rows::band(self.registry, m, self.files_only))
+                    .filter(|(u, _)| {
                         self.registry
                             .choice_of(u.id())
                             .is_none_or(|(_, c)| c.default == u.id())
                     })
-                    .map(|u| u.id().to_string())
+                    .map(|(u, _)| u.id().to_string())
                     .collect();
                 if ids.iter().all(|id| self.selection.contains(id)) {
                     for id in ids {
@@ -814,7 +816,7 @@ fn next_of(options: &[String], current: &str, step: isize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rows::{Mark, Shown};
+    use crate::rows::{Mark, Shown, Tree};
     use crossterm::event::KeyEvent;
     use model::{
         Declarations, Hook, Input, ModuleDeclaration, Package, Platform, Profile, UnitDeclaration,
@@ -1364,6 +1366,115 @@ mod tests {
         press(&mut app, KeyCode::Home);
         press(&mut app, KeyCode::Char(' '));
         assert!(app.selection.contains("zsh") && !app.selection.contains("fish"));
+    }
+
+    #[test]
+    fn a_part_of_another_module_sits_under_its_parent() {
+        let pkg = |name: &str| {
+            vec![model::Package {
+                name: name.into(),
+                when: None,
+            }]
+        };
+        let part = |id: &str| UnitDeclaration {
+            id: id.into(),
+            name: id.to_uppercase(),
+            parent: Some("shell".into()),
+            packages: pkg(id),
+            ..Default::default()
+        };
+        let shell = UnitDeclaration {
+            id: "shell".into(),
+            name: "Shell".into(),
+            packages: pkg("starship"),
+            choice: Some(model::Choice {
+                parts: vec!["zsh".into(), "fish".into()],
+                default: "zsh".into(),
+            }),
+            ..Default::default()
+        };
+        let module = |id: &str, units, fragments| ModuleDeclaration {
+            id: id.into(),
+            name: id.to_uppercase(),
+            about: None,
+            root: PathBuf::from("/r"),
+            units,
+            fragments,
+        };
+        // The private module adds nushell to the choice of the public shell
+        let extend = model::Fragment {
+            unit: "shell".into(),
+            merge: model::Merge::Extend,
+            when: None,
+            packages: Vec::new(),
+            aur: Vec::new(),
+            services: Vec::new(),
+            files: Vec::new(),
+            variants: Vec::new(),
+            inputs: Vec::new(),
+            hooks: Vec::new(),
+            choice: Some(model::ChoiceChange {
+                parts: vec!["nushell".into()],
+                default: None,
+            }),
+        };
+        let registry = Registry::new(
+            Declarations {
+                modules: vec![
+                    module("term", vec![shell, part("zsh"), part("fish")], Vec::new()),
+                    module("work", vec![part("nushell")], vec![extend]),
+                ],
+            },
+            &Platform {
+                distro: "arch".into(),
+                arch: "x86_64".into(),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let profiles = Profiles::new([]).unwrap();
+        let machine = Machine::default();
+        let mut app = app(&registry, &profiles, &machine);
+        press(&mut app, KeyCode::Down);
+        press(&mut app, KeyCode::Down);
+        press(&mut app, KeyCode::Enter); // none: the units
+        let rows = app.rows();
+        let ids: Vec<&str> = rows
+            .iter()
+            .map(|row| match row {
+                Row::Section { id, .. } | Row::Unit { id, .. } => id.as_str(),
+                _ => "",
+            })
+            .collect();
+        assert_eq!(
+            ids,
+            ["term", "shell", "zsh", "fish", "nushell"],
+            "one band: the private part under its public parent, no empty band"
+        );
+        assert!(matches!(&rows[0], Row::Section { total: 4, .. }));
+        assert!(matches!(
+            &rows[4],
+            Row::Unit {
+                tree: Tree::Last,
+                ..
+            }
+        ));
+        assert!(matches!(
+            &rows[3],
+            Row::Unit {
+                tree: Tree::Middle,
+                ..
+            }
+        ));
+        // Space on the band: shell and the default part
+        press(&mut app, KeyCode::Char(' '));
+        assert!(app.selection.contains("shell") && app.selection.contains("zsh"));
+        assert!(!app.selection.contains("nushell"));
+        // Space on nushell: it replaces zsh
+        press(&mut app, KeyCode::End);
+        press(&mut app, KeyCode::Char(' '));
+        assert!(app.selection.contains("nushell") && !app.selection.contains("zsh"));
+        assert!(matches!(&app.rows()[0], Row::Section { selected: 2, .. }));
     }
 
     #[test]

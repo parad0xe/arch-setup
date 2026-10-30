@@ -6,8 +6,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use model::{
-    Choice, Condition, Expected, FileEntry, Fragment, Hook, Input, InputKind, InputOption, Merge,
-    Mode, ModuleDeclaration, Package, Service, UnitDeclaration, Variant,
+    Choice, ChoiceChange, Condition, Expected, FileEntry, Fragment, Hook, Input, InputKind,
+    InputOption, Merge, Mode, ModuleDeclaration, Package, Service, UnitDeclaration, Variant,
 };
 use serde::Deserialize;
 
@@ -74,12 +74,14 @@ struct UnitTable {
     choice: Option<ChoiceTable>,
 }
 
-/// `choice = { parts = ["zsh", "fish"], default = "zsh" }`.
+/// `choice = { parts = ["zsh", "fish"], default = "zsh" }`; a fragment
+/// extending the unit may leave the default out.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ChoiceTable {
+    #[serde(default)]
     parts: Vec<String>,
-    default: String,
+    default: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -272,6 +274,18 @@ fn convert_table(path: &Path, table: UnitTable) -> Result<Converted, RepoError> 
             path: path.to_path_buf(),
             unit: label.clone(),
         })?;
+        let choice = choice
+            .map(|c| {
+                let default = c.default.ok_or_else(|| RepoError::ChoiceDefault {
+                    path: path.to_path_buf(),
+                    unit: label.clone(),
+                })?;
+                Ok(Choice {
+                    parts: c.parts,
+                    default,
+                })
+            })
+            .transpose()?;
         return Ok(Converted::Unit(UnitDeclaration {
             id: label,
             name,
@@ -289,10 +303,7 @@ fn convert_table(path: &Path, table: UnitTable) -> Result<Converted, RepoError> 
             variants: parts.variants,
             inputs: parts.inputs,
             hooks: parts.hooks,
-            choice: choice.map(|c| Choice {
-                parts: c.parts,
-                default: c.default,
-            }),
+            choice,
         }));
     };
     let set = [
@@ -303,7 +314,6 @@ fn convert_table(path: &Path, table: UnitTable) -> Result<Converted, RepoError> 
         (attended, "attended"),
         (!requires.is_empty(), "requires"),
         (!after.is_empty(), "after"),
-        (choice.is_some(), "choice"),
     ];
     if let Some((_, field)) = set.iter().find(|(set, _)| *set) {
         return Err(RepoError::FragmentField {
@@ -323,6 +333,10 @@ fn convert_table(path: &Path, table: UnitTable) -> Result<Converted, RepoError> 
         variants: parts.variants,
         inputs: parts.inputs,
         hooks: parts.hooks,
+        choice: choice.map(|c| ChoiceChange {
+            parts: c.parts,
+            default: c.default,
+        }),
     }))
 }
 
@@ -691,16 +705,32 @@ files = [{ source = "files/zshrc", target = ".zshrc" }]
         let choice = shell.units[0].choice.as_ref().unwrap();
         assert_eq!(choice.parts, ["zsh", "fish"]);
         assert_eq!(choice.default, "zsh");
-        let chooser = parse_text(
-            "[module]\nname = \"T\"\n\n[[unit]]\nextend = \"shell\"\nchoice = { parts = [\"a\", \"b\"], default = \"a\" }\n",
+        let nodefault = parse_text(
+            "[module]\nname = \"T\"\n\n[[unit]]\nid = \"shell\"\nname = \"Shell\"\npackages = [\"starship\"]\nchoice = { parts = [\"zsh\", \"fish\"] }\n",
         );
         assert!(matches!(
-            chooser.unwrap_err(),
-            RepoError::FragmentField {
-                field: "choice",
-                ..
-            }
+            nodefault.unwrap_err(),
+            RepoError::ChoiceDefault { .. }
         ));
+        // A fragment adds parts to the choice, the default optional
+        let chooser = parse_text(
+            "[module]\nname = \"T\"\n\n[[unit]]\nextend = \"shell\"\nchoice = { parts = [\"nushell\"] }\n\n[[unit]]\noverride = \"shell\"\nchoice = { parts = [\"a\", \"b\"], default = \"a\" }\n",
+        )
+        .unwrap();
+        let change = chooser.fragments[0].choice.as_ref().unwrap();
+        assert_eq!(
+            (change.parts.as_slice(), change.default.as_deref()),
+            (&["nushell".to_string()][..], None)
+        );
+        assert_eq!(
+            chooser.fragments[1]
+                .choice
+                .as_ref()
+                .unwrap()
+                .default
+                .as_deref(),
+            Some("a")
+        );
 
         let both = parse_text(
             "[module]\nname = \"W\"\n\n[[unit]]\nid = \"x\"\nextend = \"y\"\nname = \"X\"\n",

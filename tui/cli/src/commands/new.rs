@@ -44,6 +44,8 @@ hooks = ["say_hello"]
 # A fragment adds to a unit of a repository read before this one (the public
 # one, for a private repository), or replaces its configuration with
 # override = "...": its files come from this module, its hooks from hooks.sh.
+# A unit of this module with parent = "shell" joins the choice of the public
+# shell through choice = { parts = ["nushell"] } on extend = "shell".
 # [[unit]]
 # extend = "desktop"
 # files = [{ source = "files/hypr/local.lua", target = ".config/hypr/local.lua" }]

@@ -517,6 +517,7 @@ fn a_fragment_of_another_module_brings_its_files_and_hooks() {
                 run: "extra_hello".into(),
                 when: None,
             }],
+            choice: None,
         }],
     });
     let registry = Registry::new(declarations, &platform()).unwrap();
@@ -583,6 +584,7 @@ fn an_option_a_fragment_adds_takes_its_file_from_the_fragment_module() {
             }],
             inputs: Vec::new(),
             hooks: Vec::new(),
+            choice: None,
         }],
     });
     let registry = Registry::new(declarations, &platform()).unwrap();

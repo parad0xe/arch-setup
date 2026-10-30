@@ -51,6 +51,17 @@ pub struct Fragment {
     pub variants: Vec<Variant>,
     pub inputs: Vec<Input>,
     pub hooks: Vec<Hook>,
+    /// With `extend`, more parts for the choice of the unit, and perhaps
+    /// another default; with `override`, the choice in full.
+    pub choice: Option<ChoiceChange>,
+}
+
+/// What a fragment does to the choice of the unit it names.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChoiceChange {
+    pub parts: Vec<String>,
+    /// Required when the choice is replaced.
+    pub default: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
