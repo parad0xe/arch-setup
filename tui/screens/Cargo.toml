@@ -1,0 +1,17 @@
+[package]
+name = "screens"
+description = "The selection screens of the setup: a profile, the units, the answers, the plan"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+crossterm.workspace = true
+host = { path = "../host" }
+model = { path = "../model" }
+ratatui.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true
