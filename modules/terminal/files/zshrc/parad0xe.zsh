@@ -66,7 +66,7 @@ if [ -f "$HOME/.local/bin/glg" ]; then
     compdef _git glg=git-log
 fi
 
-fastfetch
+command -v fastfetch > /dev/null && fastfetch
 
 if [ -f "$HOME/.local/bin/env" ]; then
     . "$HOME/.local/bin/env"

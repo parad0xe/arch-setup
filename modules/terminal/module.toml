@@ -4,26 +4,32 @@ about = "Shell and terminal tools"
 
 [[unit]]
 id = "shell"
-name = "Zsh, Oh My Zsh, Starship, eza, bat, zoxide, fzf, fastfetch"
+name = "Zsh, Oh My Zsh, Starship, eza, bat, zoxide, fzf"
 about = """
 Zsh as the login shell, Oh My Zsh with the autosuggestions and syntax
 highlighting plugins, the Starship prompt and the tools the zshrc runs. The
 zshrc is copied: it is edited on each machine, and these edits stay out of
-the repository. It sets Vim as the editor (git commit, sudoedit).
+the repository. It sets Vim as the editor (git commit, sudoedit). fastfetch,
+shown when a shell opens, is a part of its own.
 """
 requires = ["vim"]
 packages = ["zsh", "zsh-autosuggestions", "zsh-syntax-highlighting", "starship",
-            "eza", "bat", "zoxide", "fzf", "fastfetch"]
+            "eza", "bat", "zoxide", "fzf"]
 files = [
   { source = "files/zshrc/{zshrc}.zsh", target = ".zshrc" },
   { source = "files/starship/nerd-font-symbols.toml", target = ".config/starship.toml" },
-  { source = "files/fastfetch/{fastfetch}", target = ".config/fastfetch" },
 ]
-variants = [
-  { id = "zshrc", name = "Zsh config", options = ["default", "kayzzel", "parad0xe"] },
-  { id = "fastfetch", name = "fastfetch theme", options = ["default", "dragon"], default = "dragon" },
-]
+variants = [{ id = "zshrc", name = "Zsh config", options = ["default", "kayzzel", "parad0xe"] }]
 hooks = ["setup_shell"]
+
+[[unit]]
+id = "fastfetch"
+parent = "shell"
+name = "fastfetch system summary, with its theme"
+about = "Shown when a shell opens; the zshrc skips it when it is not installed."
+packages = ["fastfetch"]
+files = [{ source = "files/fastfetch/{theme}", target = ".config/fastfetch" }]
+variants = [{ id = "theme", name = "fastfetch theme", options = ["default", "dragon"], default = "dragon" }]
 
 [[unit]]
 id = "tmux"

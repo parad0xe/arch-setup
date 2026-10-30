@@ -36,4 +36,4 @@ eval "$(starship init zsh)"
 # Sourced last, as zsh-syntax-highlighting requires
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
-fastfetch
+command -v fastfetch > /dev/null && fastfetch

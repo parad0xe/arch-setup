@@ -144,7 +144,7 @@ eval "$(fzf --zsh)"
 eval "$(zoxide init --cmd cd zsh)"
 
 # Show system info only in interactive shells
-[[ $- == *i* ]] && fastfetch
+[[ $- == *i* ]] && command -v fastfetch > /dev/null && fastfetch
 
 # --- NVM ---
 if [ -f /usr/share/nvm/init-nvm.sh ]; then
