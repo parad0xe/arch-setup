@@ -1,0 +1,36 @@
+[module]
+name = "Wallpapers"
+about = "Wallpapers"
+
+[[unit]]
+id = "wallpapers"
+name = "Wallpapers copied from a git repository"
+about = """
+Clones the repository and copies the formats the wallpaper selector shows
+(jpg, png, webp, mp4) into ~/Pictures/wallpapers, keeping its sub-folders.
+"""
+hooks = ["deploy_wallpapers"]
+
+[[unit.inputs]]
+id = "repo"
+prompt = "Wallpapers repository"
+kind = "choice"
+custom = true
+default = "https://github.com/kayzzel/wallpapers"
+options = [{ name = "kayzzel's wallpapers", value = "https://github.com/kayzzel/wallpapers" }]
+
+[[unit]]
+id = "wallpapers-defaults"
+parent = "wallpapers"
+name = "Default desktop, lock and login wallpapers"
+about = """
+Picks the default wallpapers among the copied ones, with fzf next to a
+preview of the image: the same one everywhere, or one per screen (needed
+for a video desktop). They go where the wallpaper selector of the desktop
+stores them; the login one goes into the SDDM theme when it is installed.
+"""
+after = ["wallpapers", "wallpaper-engines", "sddm"]
+attended = true
+packages = ["fzf", "chafa"]
+inputs = [{ id = "same", prompt = "Same wallpaper for the desktop, lock and login screens?", kind = "bool", default = true }]
+hooks = ["choose_default_wallpapers"]

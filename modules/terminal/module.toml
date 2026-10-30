@@ -1,0 +1,48 @@
+[module]
+name = "Terminal"
+about = "Shell and terminal tools"
+
+[[unit]]
+id = "shell"
+name = "Zsh, Oh My Zsh, Starship, eza, bat, zoxide, fzf, fastfetch"
+about = """
+Zsh as the login shell, Oh My Zsh with the autosuggestions and syntax
+highlighting plugins, the Starship prompt and the tools the zshrc runs. The
+zshrc is copied: it is edited on each machine, and these edits stay out of
+the repository. It sets Vim as the editor (git commit, sudoedit).
+"""
+requires = ["vim"]
+packages = ["zsh", "zsh-autosuggestions", "zsh-syntax-highlighting", "starship",
+            "eza", "bat", "zoxide", "fzf", "fastfetch"]
+files = [
+  { source = "files/zshrc/{zshrc}.zsh", target = ".zshrc" },
+  { source = "files/starship/nerd-font-symbols.toml", target = ".config/starship.toml" },
+  { source = "files/fastfetch/{fastfetch}", target = ".config/fastfetch" },
+]
+variants = [
+  { id = "zshrc", name = "Zsh config", options = ["default", "kayzzel", "parad0xe"] },
+  { id = "fastfetch", name = "fastfetch theme", options = ["default", "dragon"], default = "dragon" },
+]
+hooks = ["setup_shell"]
+
+[[unit]]
+id = "tmux"
+name = "Tmux terminal multiplexer"
+about = "tmux and its config, copied so that its edits stay out of the repository."
+requires = ["shell"]
+packages = ["tmux"]
+files = [{ source = "files/tmux/default.conf", target = ".tmux.conf" }]
+
+[[unit]]
+id = "vim"
+name = "Vim and vim-plug"
+about = "Vim, vim-plug, and the vimrc, copied so that its edits stay out of the repository."
+packages = ["vim"]
+files = [{ source = "files/vimrc/{vimrc}.vim", target = ".vimrc" }]
+variants = [{ id = "vimrc", name = "Vim config", options = ["default", "kayzzel", "parad0xe"] }]
+hooks = ["install_vim_plug"]
+
+[[unit]]
+id = "yazi"
+name = "yazi terminal file manager"
+packages = ["yazi"]

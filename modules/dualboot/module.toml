@@ -1,0 +1,39 @@
+[module]
+name = "Dual boot"
+about = "Dual boot with GRUB"
+
+[[unit]]
+id = "dualboot"
+name = "os-prober: other systems in the GRUB menu"
+about = """
+os-prober and ntfs-3g (Windows partitions), os-prober enabled in GRUB and
+its menu regenerated. Not on an Apple Silicon Mac: there, macOS is picked
+in Apple's boot picker (hold the power button), GRUB cannot boot it, and
+Windows does not run.
+"""
+when = { bootloader = "grub", apple_silicon = false, vm = false }
+packages = ["os-prober", "ntfs-3g"]
+hooks = ["setup_dualboot"]
+
+[[unit]]
+id = "savedefault"
+parent = "dualboot"
+name = "GRUB selects the entry booted last time"
+about = "Skipped when /boot/grub is on Btrfs, LVM, RAID or LUKS, where GRUB cannot save it."
+when = { bootloader = "grub", apple_silicon = false, vm = false }
+after = ["dualboot"]
+hooks = ["setup_grub_savedefault"]
+
+[[unit]]
+id = "clock"
+parent = "dualboot"
+name = "Hardware clock in local time or UTC, for Windows"
+about = """
+Windows keeps the hardware clock in local time, Linux in UTC: one of them
+must follow the other. With UTC, Windows is set to UTC too (the hook prints
+the registry command).
+"""
+when = { bootloader = "grub", apple_silicon = false, vm = false, filesystems = "ntfs" }
+after = ["timezone"]
+inputs = [{ id = "clock", prompt = "Hardware clock", kind = "choice", options = ["utc", "localtime"], default = "utc" }]
+hooks = ["setup_dualboot_clock"]

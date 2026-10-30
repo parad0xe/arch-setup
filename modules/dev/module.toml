@@ -1,0 +1,48 @@
+[module]
+name = "Development"
+about = "Development tools"
+
+[[unit]]
+id = "python"
+name = "Python via pyenv, uv, pyright, flake8, mypy"
+about = """
+pyenv with tk (for tkinter; the other libraries it builds Python with come
+with the base system), the latest stable Python as the global version, uv,
+and the pyright, flake8 and mypy tools.
+"""
+packages = ["tk", "uv", "pyenv"]
+hooks = ["setup_python"]
+
+[[unit]]
+id = "node"
+name = "nvm and the latest Node.js"
+packages = ["nvm"]
+hooks = ["setup_node"]
+
+[[unit]]
+id = "rust"
+name = "Rust toolchain via rustup"
+about = "rustup with the stable toolchain as default."
+packages = ["rustup"]
+hooks = ["setup_rust"]
+
+[[unit]]
+id = "neovim"
+name = "Neovim and its config"
+about = """
+Neovim with the tools its config runs: lazygit, tree-sitter-cli (Treesitter
+parsers) and unzip (Mason packages), the config (plugins with vim-plug,
+LSP, linters, formatters) and its plugins installed. Mason then installs
+its language servers and linters with pip and npm.
+"""
+requires = ["python", "node"]
+packages = ["neovim", "lazygit", "tree-sitter-cli", "unzip"]
+files = [{ source = "files/nvim/{config}", target = ".config/nvim" }]
+variants = [{ id = "config", name = "Neovim config", options = ["default", "kayzzel"] }]
+hooks = ["install_nvim_plugins"]
+
+[[unit]]
+id = "utils"
+name = "Terminal utilities (man, ripgrep)"
+about = "man-db, and ripgrep for Telescope's live grep."
+packages = ["man-db", "ripgrep"]

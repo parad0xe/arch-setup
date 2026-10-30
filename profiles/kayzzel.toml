@@ -1,0 +1,8 @@
+about = "kayzzel's setup: vim keybindings, US layout with Caps Lock as Escape"
+extends = "full"
+
+[variants]
+"desktop.keybinds" = "vim"
+"desktop.keyboard" = "vim"
+"shell.zshrc" = "kayzzel"
+"neovim.config" = "kayzzel"
