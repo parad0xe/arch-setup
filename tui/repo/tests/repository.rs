@@ -55,10 +55,18 @@ fn the_manifests_of_the_repository_load() {
         );
     }
     let full = profiles.resolve("full", &registry).unwrap();
-    assert_eq!(
-        full.selection.units().count(),
-        registry.units().filter(|u| u.offered()).count()
-    );
+    // Every offered unit, the default of each choice standing for its siblings
+    let offered = registry
+        .units()
+        .filter(|u| {
+            u.offered()
+                && registry
+                    .choice_of(u.id())
+                    .is_none_or(|(_, c)| c.default == u.id())
+        })
+        .count();
+    assert_eq!(full.selection.units().count(), offered);
+    assert!(full.selection.contains("zsh") && !full.selection.contains("fish"));
     let plan = model::plan::build(&registry, &full.selection);
     assert_eq!(plan.steps()[0].unit(), "system");
     assert!(plan.left_out().is_empty());

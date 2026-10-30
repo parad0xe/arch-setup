@@ -71,6 +71,16 @@ pub struct UnitDeclaration {
     pub variants: Vec<Variant>,
     pub inputs: Vec<Input>,
     pub hooks: Vec<Hook>,
+    /// Exclusive parts: exactly one of them comes with the unit.
+    pub choice: Option<Choice>,
+}
+
+/// A choice between parts of a unit: one of them is in the run when the
+/// unit is, the default when none is picked.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Choice {
+    pub parts: Vec<String>,
+    pub default: String,
 }
 
 /// A package, for some machines only when it has a condition.

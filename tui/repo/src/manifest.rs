@@ -6,8 +6,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use model::{
-    Condition, Expected, FileEntry, Fragment, Hook, Input, InputKind, InputOption, Merge, Mode,
-    ModuleDeclaration, Package, Service, UnitDeclaration, Variant,
+    Choice, Condition, Expected, FileEntry, Fragment, Hook, Input, InputKind, InputOption, Merge,
+    Mode, ModuleDeclaration, Package, Service, UnitDeclaration, Variant,
 };
 use serde::Deserialize;
 
@@ -71,6 +71,15 @@ struct UnitTable {
     inputs: Vec<InputTable>,
     #[serde(default)]
     hooks: Vec<HookEntry>,
+    choice: Option<ChoiceTable>,
+}
+
+/// `choice = { parts = ["zsh", "fish"], default = "zsh" }`.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ChoiceTable {
+    parts: Vec<String>,
+    default: String,
 }
 
 #[derive(Deserialize)]
@@ -238,6 +247,7 @@ fn convert_table(path: &Path, table: UnitTable) -> Result<Converted, RepoError> 
         variants,
         inputs,
         hooks,
+        choice,
     } = table;
     let (label, merge) = match (id, extend, overrides) {
         (Some(id), None, None) => (id, None),
@@ -279,6 +289,10 @@ fn convert_table(path: &Path, table: UnitTable) -> Result<Converted, RepoError> 
             variants: parts.variants,
             inputs: parts.inputs,
             hooks: parts.hooks,
+            choice: choice.map(|c| Choice {
+                parts: c.parts,
+                default: c.default,
+            }),
         }));
     };
     let set = [
@@ -289,6 +303,7 @@ fn convert_table(path: &Path, table: UnitTable) -> Result<Converted, RepoError> 
         (attended, "attended"),
         (!requires.is_empty(), "requires"),
         (!after.is_empty(), "after"),
+        (choice.is_some(), "choice"),
     ];
     if let Some((_, field)) = set.iter().find(|(set, _)| *set) {
         return Err(RepoError::FragmentField {
@@ -668,6 +683,24 @@ files = [{ source = "files/zshrc", target = ".zshrc" }]
         assert_eq!(extend.files[0].target, ".config/hypr/local.lua");
         assert_eq!(extend.hooks[0].run, "announce");
         assert_eq!(module.fragments[1].merge, Merge::Override);
+
+        let shell = parse_text(
+            "[module]\nname = \"T\"\n\n[[unit]]\nid = \"shell\"\nname = \"Shell\"\npackages = [\"starship\"]\nchoice = { parts = [\"zsh\", \"fish\"], default = \"zsh\" }\n",
+        )
+        .unwrap();
+        let choice = shell.units[0].choice.as_ref().unwrap();
+        assert_eq!(choice.parts, ["zsh", "fish"]);
+        assert_eq!(choice.default, "zsh");
+        let chooser = parse_text(
+            "[module]\nname = \"T\"\n\n[[unit]]\nextend = \"shell\"\nchoice = { parts = [\"a\", \"b\"], default = \"a\" }\n",
+        );
+        assert!(matches!(
+            chooser.unwrap_err(),
+            RepoError::FragmentField {
+                field: "choice",
+                ..
+            }
+        ));
 
         let both = parse_text(
             "[module]\nname = \"W\"\n\n[[unit]]\nid = \"x\"\nextend = \"y\"\nname = \"X\"\n",

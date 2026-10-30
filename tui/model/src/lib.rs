@@ -20,7 +20,7 @@ mod registry;
 mod selection;
 
 pub use declarations::{
-    Declarations, FileEntry, Fragment, Hook, Input, InputKind, InputOption, Merge, Mode,
+    Choice, Declarations, FileEntry, Fragment, Hook, Input, InputKind, InputOption, Merge, Mode,
     ModuleDeclaration, Package, Service, UnitDeclaration, Variant,
 };
 pub use plan::{Plan, Reason, Step};

@@ -115,7 +115,9 @@ pub(crate) fn implied(registry: &Registry, selection: &Selection) -> BTreeMap<St
         .steps()
         .iter()
         .filter_map(|step| match step.reason() {
-            Reason::RequiredBy(by) => Some((step.unit().to_string(), by.clone())),
+            Reason::RequiredBy(by) | Reason::DefaultOf(by) => {
+                Some((step.unit().to_string(), by.clone()))
+            }
             _ => None,
         })
         .collect()

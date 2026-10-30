@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 use crate::declarations::{
-    Declarations, FileEntry, Fragment, Input, InputKind, Merge, Mode, ModuleDeclaration, Service,
-    UnitDeclaration, Variant,
+    Choice, Declarations, FileEntry, Fragment, Input, InputKind, Merge, Mode, ModuleDeclaration,
+    Service, UnitDeclaration, Variant,
 };
 use crate::platform::Platform;
 
@@ -125,6 +125,14 @@ pub enum RegistryError {
     },
     #[error("unit {unit}: variant {variant} has no name")]
     VariantName { unit: String, variant: String },
+    #[error("unit {unit}: a choice is between at least two parts")]
+    ChoiceTooSmall { unit: String },
+    #[error("unit {unit}: the choice names {part}, which is not one of its parts")]
+    ChoiceNotAPart { unit: String, part: String },
+    #[error("unit {unit}: the default {default} of the choice is not one of its parts")]
+    ChoiceDefault { unit: String, default: String },
+    #[error("unit {unit}: requires {part}, one of the parts of its choice")]
+    ChoiceRequired { unit: String, part: String },
 }
 
 /// A hook of a unit: the function, and the folder of the module whose
@@ -383,6 +391,11 @@ impl Unit {
         &self.extended_by
     }
 
+    /// The exclusive parts of the unit, when it has some.
+    pub fn choice(&self) -> Option<&Choice> {
+        self.decl.choice.as_ref()
+    }
+
     /// The module folder holding the files of an option a fragment added to
     /// a variant; none for the unit's own options.
     pub fn option_root(&self, variant: &str, option: &str) -> Option<&Path> {
@@ -532,6 +545,36 @@ impl Registry {
                     });
                 }
             }
+            if let Some(choice) = unit.choice() {
+                if choice.parts.len() < 2 {
+                    return Err(RegistryError::ChoiceTooSmall {
+                        unit: unit.id().into(),
+                    });
+                }
+                for part in &choice.parts {
+                    if !self
+                        .unit(part)
+                        .is_some_and(|p| p.parent() == Some(unit.id()))
+                    {
+                        return Err(RegistryError::ChoiceNotAPart {
+                            unit: unit.id().into(),
+                            part: part.clone(),
+                        });
+                    }
+                    if unit.requires().contains(part) {
+                        return Err(RegistryError::ChoiceRequired {
+                            unit: unit.id().into(),
+                            part: part.clone(),
+                        });
+                    }
+                }
+                if !choice.parts.contains(&choice.default) {
+                    return Err(RegistryError::ChoiceDefault {
+                        unit: unit.id().into(),
+                        default: choice.default.clone(),
+                    });
+                }
+            }
             for (relation, targets) in [("requires", unit.requires()), ("after", unit.after())] {
                 for target in targets {
                     if target == unit.id() {
@@ -624,6 +667,18 @@ impl Registry {
     /// The parts of a unit, in order.
     pub fn parts<'a>(&'a self, parent: &'a str) -> impl Iterator<Item = &'a Unit> + 'a {
         self.units().filter(move |u| u.parent() == Some(parent))
+    }
+
+    /// The parent whose choice a part belongs to, with that choice.
+    pub fn choice_of(&self, part: &str) -> Option<(&Unit, &Choice)> {
+        let parent = self.unit(part)?.parent()?;
+        let unit = self.unit(parent)?;
+        let choice = unit.choice()?;
+        choice
+            .parts
+            .iter()
+            .any(|p| p == part)
+            .then_some((unit, choice))
     }
 
     /// The units requiring a unit.
@@ -909,6 +964,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::declarations::{Hook, InputOption, Package};
     use crate::platform::{Condition, Expected};
+    use crate::{Profile, Profiles, Reason, Selection};
 
     pub(crate) fn platform() -> Platform {
         Platform {
@@ -983,6 +1039,133 @@ pub(crate) mod tests {
             options: options.iter().map(|o| o.to_string()).collect(),
             default: None,
         }
+    }
+
+    #[test]
+    fn a_choice_between_parts_is_checked_and_one_part_comes_with_the_unit() {
+        let platform = Platform {
+            distro: "arch".into(),
+            arch: "x86_64".into(),
+            ..Default::default()
+        };
+        let pkg = |name: &str| {
+            vec![Package {
+                name: name.into(),
+                when: None,
+            }]
+        };
+        let part = |id: &str| UnitDeclaration {
+            id: id.into(),
+            name: id.to_uppercase(),
+            parent: Some("shell".into()),
+            packages: pkg(id),
+            ..Default::default()
+        };
+        let shell = UnitDeclaration {
+            id: "shell".into(),
+            name: "Shell".into(),
+            packages: pkg("starship"),
+            choice: Some(Choice {
+                parts: vec!["zsh".into(), "fish".into()],
+                default: "zsh".into(),
+            }),
+            ..Default::default()
+        };
+        let term = module(
+            "term",
+            vec![shell.clone(), part("zsh"), part("fish"), part("fastfetch")],
+        );
+        let reg = Registry::new(
+            Declarations {
+                modules: vec![term.clone()],
+            },
+            &platform,
+        )
+        .unwrap();
+        assert!(reg.unit("zsh").unwrap().offered() && reg.unit("fish").unwrap().offered());
+        assert_eq!(reg.choice_of("fish").map(|(u, _)| u.id()), Some("shell"));
+        assert!(reg.choice_of("fastfetch").is_none());
+
+        // The plan: the default part comes with the unit, a picked one replaces it
+        let mut selection = Selection::new();
+        selection.select("shell");
+        let plan = crate::plan::build(&reg, &selection);
+        let units: Vec<&str> = plan.steps().iter().map(|s| s.unit()).collect();
+        assert_eq!(units, ["shell", "zsh"]);
+        assert_eq!(
+            plan.step("zsh").unwrap().reason(),
+            &Reason::DefaultOf("shell".into())
+        );
+        selection.select("fish");
+        let plan = crate::plan::build(&reg, &selection);
+        let units: Vec<&str> = plan.steps().iter().map(|s| s.unit()).collect();
+        assert_eq!(units, ["shell", "fish"]);
+
+        // Profiles: a pattern keeps the default, a name picks
+        let profiles = Profiles::new([
+            Profile {
+                name: "full".into(),
+                units: vec!["*".into()],
+                ..Default::default()
+            },
+            Profile {
+                name: "fishy".into(),
+                extends: Some("full".into()),
+                units: vec!["fish".into()],
+                ..Default::default()
+            },
+        ])
+        .unwrap();
+        let full = profiles.resolve("full", &reg).unwrap().selection;
+        assert!(full.contains("zsh") && !full.contains("fish") && full.contains("fastfetch"));
+        let fishy = profiles.resolve("fishy", &reg).unwrap().selection;
+        assert!(fishy.contains("fish") && !fishy.contains("zsh"));
+
+        // The mistakes
+        let err = |units: Vec<UnitDeclaration>| {
+            Registry::new(
+                Declarations {
+                    modules: vec![module("term", units)],
+                },
+                &platform,
+            )
+            .unwrap_err()
+        };
+        let mut small = shell.clone();
+        small.choice = Some(Choice {
+            parts: vec!["zsh".into()],
+            default: "zsh".into(),
+        });
+        assert!(matches!(
+            err(vec![small, part("zsh"), part("fish")]),
+            RegistryError::ChoiceTooSmall { .. }
+        ));
+        let mut stranger = shell.clone();
+        stranger.choice = Some(Choice {
+            parts: vec!["zsh".into(), "fastfetch".into()],
+            default: "zsh".into(),
+        });
+        let mut loose = part("fastfetch");
+        loose.parent = None;
+        assert!(matches!(
+            err(vec![stranger, part("zsh"), part("fish"), loose]),
+            RegistryError::ChoiceNotAPart { .. }
+        ));
+        let mut odd = shell.clone();
+        odd.choice = Some(Choice {
+            parts: vec!["zsh".into(), "fish".into()],
+            default: "bash".into(),
+        });
+        assert!(matches!(
+            err(vec![odd, part("zsh"), part("fish")]),
+            RegistryError::ChoiceDefault { .. }
+        ));
+        let mut needy = shell.clone();
+        needy.requires = vec!["zsh".into()];
+        assert!(matches!(
+            err(vec![needy, part("zsh"), part("fish")]),
+            RegistryError::ChoiceRequired { .. }
+        ));
     }
 
     #[test]

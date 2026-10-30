@@ -4,5 +4,5 @@ extends = "full"
 [variants]
 "desktop.keybinds" = "vim"
 "desktop.keyboard" = "vim"
-"shell.zshrc" = "kayzzel"
+"zsh.zshrc" = "kayzzel"
 "neovim.config" = "kayzzel"

@@ -4,23 +4,42 @@ about = "Shell and terminal tools"
 
 [[unit]]
 id = "shell"
-name = "Zsh, Oh My Zsh, Starship, eza, bat, zoxide, fzf"
+name = "Shell: Starship, eza, bat, zoxide, fzf, and Zsh or fish"
 about = """
-Zsh as the login shell, Oh My Zsh with the autosuggestions and syntax
-highlighting plugins, the Starship prompt and the tools the zshrc runs. The
-zshrc is copied: it is edited on each machine, and these edits stay out of
-the repository. It sets Vim as the editor (git commit, sudoedit). fastfetch,
-shown when a shell opens, is a part of its own.
+The prompt and the tools the shell configs run, with the Starship config.
+The shell itself is a choice between the zsh and fish parts: one of them
+comes with this unit, Zsh unless fish is picked. Its config is copied: it is
+edited on each machine, and these edits stay out of the repository.
 """
 requires = ["vim"]
-packages = ["zsh", "zsh-autosuggestions", "zsh-syntax-highlighting", "starship",
-            "eza", "bat", "zoxide", "fzf"]
-files = [
-  { source = "files/zshrc/{zshrc}.zsh", target = ".zshrc" },
-  { source = "files/starship/nerd-font-symbols.toml", target = ".config/starship.toml" },
-]
+choice = { parts = ["zsh", "fish"], default = "zsh" }
+packages = ["starship", "eza", "bat", "zoxide", "fzf"]
+files = [{ source = "files/starship/nerd-font-symbols.toml", target = ".config/starship.toml" }]
+
+[[unit]]
+id = "zsh"
+parent = "shell"
+name = "Zsh and Oh My Zsh"
+about = """
+Zsh as the login shell, Oh My Zsh with the autosuggestions and syntax
+highlighting plugins, and the zshrc, which sets Vim as the editor (git
+commit, sudoedit).
+"""
+requires = ["shell"]
+packages = ["zsh", "zsh-autosuggestions", "zsh-syntax-highlighting"]
+files = [{ source = "files/zshrc/{zshrc}.zsh", target = ".zshrc" }]
 variants = [{ id = "zshrc", name = "Zsh config", options = ["default", "kayzzel", "parad0xe"] }]
-hooks = ["setup_shell"]
+hooks = ["setup_zsh"]
+
+[[unit]]
+id = "fish"
+parent = "shell"
+name = "fish"
+about = "fish as the login shell, with a config that runs the same tools as the zshrc."
+requires = ["shell"]
+packages = ["fish"]
+files = [{ source = "files/fish", target = ".config/fish" }]
+hooks = ["setup_fish"]
 
 [[unit]]
 id = "fastfetch"

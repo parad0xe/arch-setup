@@ -10,8 +10,8 @@ and a run that stops (a failure, Ctrl-C) is resumed where it was.
 Units, grouped by module and picked on the screens or by a profile: the
 Hyprland desktop (Waybar, mako, rofi, SDDM, fonts, cursor and icon themes),
 hardware services (NetworkManager, PipeWire, Bluetooth, NVIDIA drivers,
-microcode, security keys), the shell and terminal tools (Zsh, Starship,
-tmux, Vim, yazi), applications (Ghostty, Brave, Nautilus, KeePass...),
+microcode, security keys), the shell and terminal tools (Zsh or fish,
+Starship, tmux, Vim, yazi), applications (Ghostty, Brave, Nautilus, KeePass...),
 development tools (Python, Node.js, Rust, Neovim), dual boot with GRUB,
 QEMU/KVM, your settings (SSH key, Git, timezone) and wallpapers. The
 `system` units (update, base packages, yay) always run first; the units

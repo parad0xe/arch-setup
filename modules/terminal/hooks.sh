@@ -1,17 +1,29 @@
 #!/bin/bash
 # Hooks of modules/terminal.toml, run by lib/hook.sh.
 
-# Makes Zsh the login shell and installs Oh My Zsh.
-setup_shell() {
-    # chsh asks for a password, which a background step cannot give: sudo
-    # changes the shell instead
-    local zsh user
-    zsh=$(command -v zsh)
+# Makes a shell the login shell of the user, when it is not yet. chsh asks
+# for a password, which a background step cannot give: sudo changes it.
+#
+# Args:
+#   shell: The program name (zsh, fish).
+_login_shell() {
+    local shell user
+    shell=$(command -v "$1")
     user=$(id -un)
-    if [ "$(getent passwd "$user" | cut -d: -f7)" != "$zsh" ]; then
-        log_info "Making Zsh the login shell of $user..."
-        sudo chsh -s "$zsh" "$user"
+    if [ "$(getent passwd "$user" | cut -d: -f7)" != "$shell" ]; then
+        log_info "Making $1 the login shell of $user..."
+        sudo chsh -s "$shell" "$user"
     fi
+}
+
+# Makes fish the login shell.
+setup_fish() {
+    _login_shell fish
+}
+
+# Makes Zsh the login shell and installs Oh My Zsh.
+setup_zsh() {
+    _login_shell zsh
 
     if [ -d "$HOME/.oh-my-zsh" ]; then
         log_info "Oh My Zsh is already installed."

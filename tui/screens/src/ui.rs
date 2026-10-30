@@ -548,6 +548,7 @@ fn draw_summary(frame: &mut Frame, app: &mut App, area: Rect) {
                 let why = match reason {
                     Reason::Always => Span::styled("always", t.dim()),
                     Reason::Picked => Span::styled("picked", t.fg(p.green)),
+                    Reason::DefaultOf(by) => Span::styled(format!("default of {by}"), t.fg(p.cyan)),
                     Reason::RequiredBy(by) => Span::styled(
                         format!("{} {by}", if t.ascii { "<-" } else { "←" }),
                         t.fg(p.cyan),
@@ -939,6 +940,31 @@ fn unit_details<'a>(app: &'a App, lines: &mut Vec<Line<'a>>, id: &str, mark: Opt
     );
     let parts: Vec<&str> = registry.parts(id).map(Unit::id).collect();
     let required_by: Vec<&str> = registry.required_by(id).map(Unit::id).collect();
+    if let Some(choice) = unit.choice() {
+        lines.push(Line::from(""));
+        lines.push(heading(t, "Choice"));
+        lines.push(Line::from(format!(
+            "One of {} comes with it; {} by default.",
+            choice.parts.join(", "),
+            choice.default
+        )));
+    }
+    if let Some((parent, choice)) = registry.choice_of(id) {
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(
+            format!(
+                "One of the {} choice of {}{}; Space picks it instead of the others.",
+                choice.parts.len(),
+                parent.id(),
+                if choice.default == id {
+                    " (the default)"
+                } else {
+                    ""
+                }
+            ),
+            t.dim(),
+        )));
+    }
     if !unit.requires().is_empty()
         || !unit.after().is_empty()
         || !parts.is_empty()

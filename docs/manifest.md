@@ -63,6 +63,7 @@ and runs a hook, in this order.
 | `variants` | list of variants     | Choices between versions of its files. See Variants.                    |
 | `inputs`   | list of inputs       | Questions answered before the run. See Inputs.                          |
 | `hooks`    | list of hooks        | Functions of the module's `hooks.sh`, run last, in order. See Hooks.    |
+| `choice`   | table                | Exclusive parts: `{ parts = [...], default = "..." }`. See Parts.        |
 
 A unit declares at least one of `packages`, `aur`, `services`, `files`,
 `hooks`.
@@ -73,6 +74,15 @@ A unit declares at least one of `packages`, `aur`, `services`, `files`,
 under `desktop`. A part that its parent `requires` is installed with it and
 not offered on its own; the other parts are offered as options of the
 parent. A part may not itself have parts.
+
+`choice` makes some parts exclusive: `shell` declares
+`choice = { parts = ["zsh", "fish"], default = "zsh" }`, and exactly one of
+them is in the run when `shell` is, the default when none is picked. On the
+units screen these parts pick like radio buttons. In a profile, a pattern
+(`*`) keeps the default and a name picks: `units = ["*", "fish"]` means
+fish. A part of a choice usually `requires` its parent, so that picking it
+brings the shared pieces along. The parts of a choice are parts of the unit
+(same module, `parent` set), at least two, not `required` by the unit.
 
 ### Conditions
 
@@ -376,7 +386,9 @@ and inputs of the extended profile apply unless overridden.
    answer of each input.
 2. The plan adds the units the selected ones `require`, recursively, when
    they are available; a required unit that is not available is noted and
-   left out. The `always` units are added.
+   left out. The `always` units are added, and for a unit with a `choice`
+   whose parts are all unpicked, its default part (the first available one
+   otherwise).
 3. Order: `always` units first, in declaration order; then the others so
    that a unit comes after what it `requires` and what it is `after`;
    declaration order breaks ties. A cycle is an error.
@@ -426,6 +438,8 @@ Reading the manifests fails, with the file and line, when:
   module, or a unit another module already overrides; it adds an option a
   variant already has, or a new variant without a name, or an option whose
   file is missing from its module;
+- a `choice` has fewer than two parts, names a unit that is not a part of
+  the unit, a default outside its parts, or a part the unit `requires`;
 - a unit declares nothing to do.
 
 A profile fails when `extends` is unknown or cyclic, or when a variant or

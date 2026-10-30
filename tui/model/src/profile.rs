@@ -136,13 +136,24 @@ impl Profiles {
         for profile in self.chain(name)? {
             for pattern in &profile.units {
                 let matcher = compile(&profile.name, pattern)?;
+                let literal = !pattern.contains(['*', '?', '[']);
                 let mut matched = false;
                 for unit in registry
                     .units()
                     .filter(|u| u.offered() && matcher.matches(u.id()))
                 {
-                    selection.select(unit.id());
                     matched = true;
+                    // Exclusive parts: a name picks one, a pattern keeps the default
+                    if let Some((_, choice)) = registry.choice_of(unit.id()) {
+                        if literal {
+                            for part in &choice.parts {
+                                selection.unselect(part);
+                            }
+                        } else if choice.default != unit.id() {
+                            continue;
+                        }
+                    }
+                    selection.select(unit.id());
                 }
                 if !matched {
                     warnings.push(format!(

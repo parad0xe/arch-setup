@@ -459,6 +459,12 @@ impl<'a> App<'a> {
                     .registry
                     .units()
                     .filter(|u| u.module() == id && u.offered() && self.deployable(u.id()))
+                    // Of exclusive parts, the default alone
+                    .filter(|u| {
+                        self.registry
+                            .choice_of(u.id())
+                            .is_none_or(|(_, c)| c.default == u.id())
+                    })
                     .map(|u| u.id().to_string())
                     .collect();
                 if ids.iter().all(|id| self.selection.contains(id)) {
@@ -473,7 +479,21 @@ impl<'a> App<'a> {
                 self.move_cursor(1);
             }
             Row::Unit { id, .. } => {
-                self.selection.toggle(&id);
+                // An exclusive part: picking it unpicks its siblings
+                let siblings = self
+                    .registry
+                    .choice_of(&id)
+                    .map(|(_, choice)| choice.parts.clone());
+                match siblings {
+                    Some(_) if self.selection.contains(&id) => self.selection.unselect(&id),
+                    Some(parts) => {
+                        for part in parts {
+                            self.selection.unselect(&part);
+                        }
+                        self.selection.select(&id);
+                    }
+                    None => self.selection.toggle(&id),
+                }
                 self.move_cursor(1);
             }
             Row::Variant { .. } => self.cycle(1),
@@ -794,7 +814,7 @@ fn next_of(options: &[String], current: &str, step: isize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rows::Shown;
+    use crate::rows::{Mark, Shown};
     use crossterm::event::KeyEvent;
     use model::{
         Declarations, Hook, Input, ModuleDeclaration, Package, Platform, Profile, UnitDeclaration,
@@ -1267,6 +1287,83 @@ mod tests {
         });
         assert_eq!(app.screen, Screen::Inputs);
         assert!(app.selection.contains("git"));
+    }
+
+    #[test]
+    fn exclusive_parts_pick_like_radio_buttons() {
+        let pkg = |name: &str| {
+            vec![model::Package {
+                name: name.into(),
+                when: None,
+            }]
+        };
+        let part = |id: &str| UnitDeclaration {
+            id: id.into(),
+            name: id.to_uppercase(),
+            parent: Some("shell".into()),
+            packages: pkg(id),
+            ..Default::default()
+        };
+        let shell = UnitDeclaration {
+            id: "shell".into(),
+            name: "Shell".into(),
+            packages: pkg("starship"),
+            choice: Some(model::Choice {
+                parts: vec!["zsh".into(), "fish".into()],
+                default: "zsh".into(),
+            }),
+            ..Default::default()
+        };
+        let registry = Registry::new(
+            Declarations {
+                modules: vec![ModuleDeclaration {
+                    id: "term".into(),
+                    name: "Terminal".into(),
+                    about: None,
+                    root: PathBuf::from("/r"),
+                    units: vec![shell, part("zsh"), part("fish")],
+                    fragments: Vec::new(),
+                }],
+            },
+            &Platform {
+                distro: "arch".into(),
+                arch: "x86_64".into(),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let profiles = Profiles::new([]).unwrap();
+        let machine = Machine::default();
+        let mut app = app(&registry, &profiles, &machine);
+        press(&mut app, KeyCode::Down);
+        press(&mut app, KeyCode::Down);
+        press(&mut app, KeyCode::Enter); // none: the units
+        // rows: the module band, shell, zsh, fish
+        press(&mut app, KeyCode::Down);
+        press(&mut app, KeyCode::Char(' ')); // shell
+        assert!(app.selection.contains("shell"));
+        let rows = app.rows();
+        assert!(
+            matches!(&rows[2], Row::Unit { id, mark: Mark::Added(by), .. } if id == "zsh" && by == "shell"),
+            "the default part comes with shell: {rows:?}"
+        );
+        press(&mut app, KeyCode::Down);
+        press(&mut app, KeyCode::Char(' ')); // fish
+        assert!(app.selection.contains("fish") && !app.selection.contains("zsh"));
+        let rows = app.rows();
+        assert!(matches!(&rows[2], Row::Unit { id, mark: Mark::None, .. } if id == "zsh"));
+        press(&mut app, KeyCode::Up);
+        press(&mut app, KeyCode::Char(' ')); // zsh: fish unpicked
+        assert!(app.selection.contains("zsh") && !app.selection.contains("fish"));
+        press(&mut app, KeyCode::Up);
+        press(&mut app, KeyCode::Char(' ')); // zsh again: unpicked, the default is back
+        assert!(!app.selection.contains("zsh"));
+        let rows = app.rows();
+        assert!(matches!(&rows[2], Row::Unit { id, mark: Mark::Added(_), .. } if id == "zsh"));
+        // Space on the module band keeps one part
+        press(&mut app, KeyCode::Home);
+        press(&mut app, KeyCode::Char(' '));
+        assert!(app.selection.contains("zsh") && !app.selection.contains("fish"));
     }
 
     #[test]

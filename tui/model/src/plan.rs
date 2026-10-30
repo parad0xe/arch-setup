@@ -15,6 +15,8 @@ pub enum Reason {
     Picked,
     /// Required by this unit.
     RequiredBy(String),
+    /// The default part of this unit's choice, none being picked.
+    DefaultOf(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,6 +100,24 @@ pub fn build(registry: &Registry, selection: &Selection) -> Plan {
             if !reasons.contains_key(required) {
                 reasons.insert(required.clone(), Reason::RequiredBy(id.clone()));
                 pending.push(required.clone());
+            }
+        }
+        // One of the exclusive parts comes with the unit: the default, or
+        // the first available one
+        if let Some(choice) = unit.choice() {
+            if choice.parts.iter().any(|part| reasons.contains_key(part)) {
+                continue;
+            }
+            let available = |part: &String| registry.unit(part).is_some_and(|u| u.available());
+            let part = std::iter::once(&choice.default)
+                .chain(&choice.parts)
+                .find(|part| available(part));
+            match part {
+                Some(part) => {
+                    reasons.insert(part.clone(), Reason::DefaultOf(id.clone()));
+                    pending.push(part.clone());
+                }
+                None => left_out.push((choice.default.clone(), id.clone())),
             }
         }
     }
