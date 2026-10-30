@@ -1,0 +1,46 @@
+[module]
+name = "Base system"
+about = "An up-to-date system, the base packages and yay, run first; the timezone"
+
+[[unit]]
+id = "system"
+name = "multilib (x86_64), keyring and full system update"
+about = """
+Enables the multilib repository on x86_64 (Arch Linux ARM has none), then
+updates the keyring and every installed package: a fresh installation has a
+stale package database, and installing from a refreshed one without
+upgrading the rest would mix package versions.
+"""
+always = true
+when = { distro = "arch" }
+hooks = ["update_system"]
+
+[[unit]]
+id = "base"
+name = "Base packages (base-devel, git, curl, wget, openssl, openssh, tree, ncdu)"
+about = """
+The packages the other units rely on: build tools, git, download tools,
+OpenSSL, OpenSSH for the SSH key and agent, diffutils for the copied
+configs, compression libraries, and a few everyday utilities.
+"""
+always = true
+when = { distro = "arch" }
+requires = ["system"]
+packages = ["base-devel", "git", "curl", "diffutils", "wget", "openssl", "openssh",
+            "zlib", "xz", "tree", "ncdu"]
+
+[[unit]]
+id = "yay"
+name = "yay AUR helper"
+about = "Built from the AUR with makepkg; the aur packages of the other units need it."
+always = true
+when = { distro = "arch" }
+requires = ["base"]
+hooks = ["install_yay"]
+
+[[unit]]
+id = "timezone"
+name = "System timezone and NTP synchronization"
+about = "Sets the timezone when one is given, enables NTP, sets the hardware clock from the system time."
+inputs = [{ id = "zone", prompt = "Timezone (Europe/Paris; empty keeps the current one)" }]
+hooks = ["setup_timezone"]

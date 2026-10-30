@@ -1,8 +1,7 @@
 .idea/
 
-user_configuration.json
-user_credentials.json
+# Build output of the TUI prototype
+tui/target/
 
-# Variant links created by deploy_config (modules/core.sh)
-selected
-selected.*
+# Working notes of the setup refactor, kept out of the repository
+docs/memory.md

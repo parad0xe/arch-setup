@@ -1,0 +1,21 @@
+[package]
+name = "runner"
+description = "Runs a plan: the packages, services, files and hooks of each unit, tracked in a run folder"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+journal = { path = "../journal" }
+model = { path = "../model" }
+nix.workspace = true
+regex-lite.workspace = true
+signal-hook.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

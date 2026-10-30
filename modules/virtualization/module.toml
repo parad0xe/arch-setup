@@ -1,0 +1,29 @@
+[module]
+name = "Virtualization"
+about = "Virtual machines"
+
+[[unit]]
+id = "qemu"
+name = "QEMU/KVM, libvirt and virt-manager"
+about = """
+QEMU/KVM with libvirt and the virt-manager GUI, libvirt enabled with its
+default NAT network, the user in the libvirt group, and VM traffic allowed
+through UFW when it is active. Not inside a VM, and not on ARM (no UEFI
+firmware package for ARM VMs).
+"""
+when = { arch = "x86_64", vm = false }
+packages = ["qemu-desktop", "libvirt", "virt-manager", "dnsmasq", "edk2-ovmf"]
+services = [{ name = "libvirtd", now = true }]
+hooks = ["setup_libvirt"]
+
+[[unit]]
+id = "vm-guest"
+name = "VM guest tools: SPICE agent, dotfiles share at boot"
+about = """
+The SPICE agent (clipboard shared with the host), and the virtiofs share
+holding the dotfiles mounted at boot, so that the config links survive a
+reboot.
+"""
+when = { vm = true }
+packages = ["spice-vdagent"]
+hooks = ["persist_dotfiles_share"]

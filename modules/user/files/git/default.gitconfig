@@ -1,0 +1,9 @@
+# Shared Git settings, linked as ~/.config/git/config by the git unit. The
+# identity (name, email, default branch) lives in ~/.gitconfig, written by
+# the unit's hook and read after this file.
+[core]
+    pager = cat
+[merge]
+    ff = false
+[pull]
+    ff = only

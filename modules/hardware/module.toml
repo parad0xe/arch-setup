@@ -1,0 +1,63 @@
+[module]
+name = "Hardware"
+about = "Hardware services"
+
+[[unit]]
+id = "network"
+name = "NetworkManager"
+packages = ["networkmanager"]
+services = ["NetworkManager"]
+
+[[unit]]
+id = "audio"
+name = "PipeWire audio stack"
+about = """
+PipeWire with its ALSA, PulseAudio and JACK replacements, and WirePlumber.
+pipewire-jack replaces jack2 when an earlier unit pulled it in.
+"""
+packages = ["pipewire", "pipewire-alsa", "pipewire-pulse", "pipewire-jack", "wireplumber"]
+
+[[unit]]
+id = "bluetooth"
+name = "Bluetooth stack (bluez)"
+about = """
+bluez and bluetoothctl, with the WirePlumber config keeping Bluetooth audio
+in A2DP (no headset microphone).
+"""
+packages = ["bluez", "bluez-utils"]
+services = ["bluetooth"]
+files = [{ source = "files/wireplumber", target = ".config/wireplumber" }]
+hooks = ["restart_wireplumber"]
+
+[[unit]]
+id = "nvidia"
+name = "NVIDIA drivers, early loading, DRM modeset"
+about = """
+nvidia-open-dkms with nvidia-prime (prime-run), loaded early by the
+initramfs, with DRM modeset on the kernel command line (GRUB or
+systemd-boot). The 32-bit libraries come from multilib, which Arch Linux
+ARM lacks.
+"""
+when = { gpu = "nvidia" }
+packages = ["linux-headers", "nvidia-open-dkms", "nvidia-utils", "egl-wayland",
+            "nvidia-settings", "nvidia-prime",
+            { name = "lib32-nvidia-utils", when = { arch = "x86_64" } }]
+hooks = ["setup_nvidia"]
+
+[[unit]]
+id = "microcode"
+name = "CPU microcode updates"
+about = "intel-ucode or amd-ucode, loaded at boot by GRUB or by the initramfs."
+when = { arch = "x86_64", vm = false }
+packages = [
+  { name = "intel-ucode", when = { cpu = "intel" } },
+  { name = "amd-ucode", when = { cpu = "amd" } },
+]
+hooks = ["setup_microcode"]
+
+[[unit]]
+id = "securitykey"
+name = "Smartcard stack for security keys (pcscd)"
+about = "pcsclite and ccid, for security keys such as a YubiKey."
+packages = ["pcsclite", "ccid"]
+services = [{ name = "pcscd", now = true }]
