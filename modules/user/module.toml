@@ -1,6 +1,6 @@
 [module]
 name = "User"
-about = "Your identity and tools: SSH config and key, Git, personal scripts"
+about = "Your identity: SSH config and key, Git"
 
 [[unit]]
 id = "ssh"
@@ -47,10 +47,3 @@ inputs = [
   { id = "branch", prompt = "Default branch", default = "main" },
 ]
 hooks = ["setup_git"]
-
-[[unit]]
-id = "bin"
-name = "Personal scripts in ~/.local/bin"
-about = "Copied with execute permissions; the folder keeps its other scripts."
-files = [{ source = "files/bin/{scripts}", target = ".local/bin", contents = true, permissions = "755" }]
-variants = [{ id = "scripts", name = "Personal scripts", options = ["default", "parad0xe"] }]

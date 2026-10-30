@@ -71,3 +71,10 @@ hooks = ["install_vim_plug"]
 id = "yazi"
 name = "yazi terminal file manager"
 packages = ["yazi"]
+
+[[unit]]
+id = "bin"
+name = "Personal scripts in ~/.local/bin"
+about = "Copied with execute permissions; the folder keeps its other scripts."
+files = [{ source = "files/bin/{scripts}", target = ".local/bin", contents = true, permissions = "755" }]
+variants = [{ id = "scripts", name = "Personal scripts", options = ["default", "parad0xe"] }]
