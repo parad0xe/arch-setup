@@ -27,6 +27,8 @@ setup_python() {
 # Installs the latest Node.js with nvm as the default version.
 setup_node() {
     log_info "Configuring nvm and installing the latest Node.js..."
+    # Installed by the nvm package, absent where the manifests are checked
+    # shellcheck source=/dev/null
     source /usr/share/nvm/init-nvm.sh
 
     if command -v node > /dev/null 2>&1; then
