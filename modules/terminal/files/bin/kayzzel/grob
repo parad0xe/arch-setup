@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Remove local branches whose remote branch no longer exists
+grob() {
+    # Fetch and prune remote-tracking branches that were deleted on the remote
+    git fetch -p || return 1
+
+    # Use Git plumbing to list only the branches whose upstream is marked [gone]
+    local -a branches
+    branches=($(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads \
+        | awk '$2 == "[gone]" {print $1}'))
+
+    if [[ -z "$branches" ]]; then
+        echo "No orphan branches to delete."
+        return 0
+    fi
+
+    echo "Deleting orphan branches:"
+    for branch in "${branches[@]}"; do
+        echo " - $branch"
+        git branch -d "$branch"
+    done
+}
+
+grob "$@"
