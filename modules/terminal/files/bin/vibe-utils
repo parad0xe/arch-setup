@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Persistent "utils" Vibe session, opened by the tmux prefix+A popup.
+# Resumes the recorded session if it still exists, otherwise starts a
+# fresh one and records its id for next time.
+
+SESSIONS_DIR="${VIBE_HOME:-$HOME/.vibe}/logs/session/unified"
+ID_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/vibe-utils/id"
+
+mkdir -p "$(dirname "$ID_FILE")"
+
+if [ -s "$ID_FILE" ]; then
+  id="$(cat "$ID_FILE")"
+  if [ -d "$SESSIONS_DIR/$id" ]; then
+    exec vibe --resume "$id"
+  fi
+fi
+
+before="$(ls -t "$SESSIONS_DIR" 2>/dev/null | head -n 1)"
+
+cd "$HOME"
+vibe
+
+# Record the id of the session this run created (newest dir).
+latest="$(ls -t "$SESSIONS_DIR" 2>/dev/null | head -n 1)"
+if [ -n "$latest" ] && [ "$latest" != "$before" ]; then
+  printf '%s\n' "$latest" > "$ID_FILE"
+fi
