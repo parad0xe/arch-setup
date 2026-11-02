@@ -1,0 +1,7 @@
+# Checked by make lint: shellcheck -x -s bash bootstrap.sh lib/*.sh modules/*/hooks.sh tests/test_helper.bash
+source-path=SCRIPTDIR
+# The library passes arrays by name (local -n): the targets look unused,
+# reassigned or used as strings to shellcheck.
+disable=SC2034,SC2178
+# Associative array keys are not arithmetic: arr[$key] is fine.
+disable=SC2004

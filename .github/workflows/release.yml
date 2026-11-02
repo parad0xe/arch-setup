@@ -1,0 +1,79 @@
+name: Release
+
+# A tag v<version> builds setup as static binaries for x86_64 and
+# aarch64, checks that the tag is the version of the workspace, and publishes
+# a GitHub release with the binaries and their SHA-256 sums: what
+# bootstrap.sh downloads.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+            arch: x86_64
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            arch: aarch64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check that the tag is the version of the workspace
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' tui/Cargo.toml | head -1)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "The tag is $GITHUB_REF_NAME but tui/Cargo.toml says $version"
+            exit 1
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install the musl linker
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends musl-tools
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }} --manifest-path tui/Cargo.toml
+      - name: Name and checksum
+        run: |
+          mkdir dist
+          cp "tui/target/${{ matrix.target }}/release/setup" "dist/setup-${{ matrix.arch }}"
+          cd dist
+          sha256sum "setup-${{ matrix.arch }}" > "setup-${{ matrix.arch }}.sha256"
+          "./setup-${{ matrix.arch }}" --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: setup-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Combined checksums
+        run: |
+          cd dist
+          cat ./*.sha256 > SHA256SUMS
+          ls -l
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

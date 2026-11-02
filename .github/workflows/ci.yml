@@ -1,0 +1,65 @@
+name: CI
+
+# GitHub has no Arch Linux runner: Arch runs in a container on an Ubuntu
+# host, as a user since the setup refuses root. There is no official Arch
+# Linux ARM image either, so the aarch64 coverage runs on the Ubuntu ARM
+# runner (free for public repositories).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # Everything, on the distribution the setup is for: shellcheck, bats, the
+  # Rust workspace and a release build
+  arch:
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    timeout-minutes: 30
+    env:
+      CARGO_HOME: /opt/cargo
+    steps:
+      - name: Install git, shellcheck, bats and rust
+        run: pacman -Syu --noconfirm --needed git shellcheck bats rust
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tui
+      - name: Check as a user
+        run: |
+          useradd -m ci
+          mkdir -p "$CARGO_HOME"
+          chown -R ci "$GITHUB_WORKSPACE" "$CARGO_HOME"
+          sudo -u ci env HOME=/home/ci PATH="$PATH" CARGO_HOME="$CARGO_HOME" make check
+      - name: Build
+        run: sudo -u ci env HOME=/home/ci PATH="$PATH" CARGO_HOME="$CARGO_HOME" cargo build --release --manifest-path tui/Cargo.toml
+
+  # The bash library and the Rust workspace on aarch64 (the lint is the
+  # arch job's: the apt shellcheck is too old)
+  arm:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends bats
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tui
+      - name: Test
+        run: make lint-rust test

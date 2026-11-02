@@ -1,0 +1,59 @@
+[module]
+name = "Applications"
+about = "Graphical applications"
+
+[[unit]]
+id = "ghostty"
+name = "Ghostty terminal"
+about = "With its config (font, theme). Not packaged for ARM, where it is built from the AUR (ghostty-git)."
+requires = ["fonts"]
+packages = [{ name = "ghostty", when = { arch = "x86_64" } }]
+files = [{ source = "files/ghostty", target = ".config/ghostty" }]
+hooks = [{ run = "build_ghostty", when = { arch = "aarch64" } }]
+
+[[unit]]
+id = "brave"
+name = "Brave web browser"
+aur = ["brave-bin"]
+
+[[unit]]
+id = "nautilus"
+name = "GNOME Files (Nautilus) file manager"
+about = """
+Handles archives and gvfs (trash, removable drives, network shares) itself,
+and becomes the default application for folders.
+"""
+packages = ["nautilus"]
+hooks = ["set_default_file_manager"]
+
+[[unit]]
+id = "keepass"
+name = "KeePass password manager"
+packages = ["keepass"]
+
+[[unit]]
+id = "krita"
+name = "Krita painting program"
+packages = ["krita"]
+
+[[unit]]
+id = "jetbrains"
+name = "JetBrains Toolbox"
+about = "Installs and updates the JetBrains IDEs. Published for x86_64 only."
+when = { arch = "x86_64" }
+aur = ["jetbrains-toolbox"]
+
+[[unit]]
+id = "discord"
+name = "Discord"
+about = "Published for x86_64 only."
+when = { arch = "x86_64" }
+packages = ["discord"]
+
+[[unit]]
+id = "yubico"
+name = "Yubico Authenticator"
+about = "Shows the OTP codes stored on a YubiKey, read through the pcscd service. Published for x86_64 only."
+when = { arch = "x86_64" }
+requires = ["securitykey"]
+aur = ["yubico-authenticator-bin"]

@@ -1,0 +1,141 @@
+[module]
+name = "Desktop"
+about = "Hyprland desktop: Hyprland, Waybar, mako, polkit agent"
+
+[[unit]]
+id = "desktop"
+name = "Hyprland desktop"
+about = """
+Hyprland with notifications (mako), polkit agent, Qt Wayland support and the
+desktop portals (file dialogs, screen sharing), and their configs. The
+Hyprland config runs the units it requires: the terminal, browser and file
+manager of its keybindings, the lock screen, the launcher, the Wi-Fi and
+Bluetooth managers, the screenshots, the wallpaper engines. The bar (Waybar)
+is a part of its own.
+"""
+requires = ["hypr-tools", "desktop-tools", "connectivity", "wallpaper-engines",
+            "audio", "fonts", "ghostty", "brave", "nautilus"]
+packages = ["hyprland", "mako", "polkit-kde-agent", "qt5-wayland", "qt6-wayland",
+            "xdg-desktop-portal-hyprland", "xdg-desktop-portal-gtk"]
+files = [
+  { source = "files/hypr", target = ".config/hypr", contents = true },
+  { source = "files/hypr/conf/keybinds/{keybinds}.lua", target = ".config/hypr/keybinds.lua" },
+  { source = "files/hypr/conf/keyboard/{keyboard}.lua", target = ".config/hypr/keyboard.lua" },
+  { source = "files/mako", target = ".config/mako" },
+]
+variants = [
+  { id = "keybinds", name = "Hyprland keybindings", options = ["default", "vim"] },
+  { id = "keyboard", name = "Keyboard layout", options = ["default", "vim"] },
+]
+hooks = ["restart_desktop_portal"]
+
+[[unit]]
+id = "waybar"
+parent = "desktop"
+name = "Waybar status bar"
+about = """
+The bar the Hyprland config starts, with its theme. A part of the desktop
+picked on its own, so that another bar can take its place.
+"""
+packages = ["waybar"]
+files = [{ source = "files/waybar/{theme}", target = ".config/waybar" }]
+variants = [{ id = "theme", name = "Waybar theme", options = ["default", "glass"] }]
+inputs = [{ id = "start_waybar", prompt = "Start Waybar when it is not running (in a Hyprland session)?", kind = "bool", default = false }]
+hooks = ["reload_waybar"]
+
+[[unit]]
+id = "hypr-tools"
+parent = "desktop"
+name = "hyprlock (lock), hyprshutdown (log out), hyprmon (monitors)"
+about = "The Hypr tools the config runs; hyprmon saves the monitor layout outside the dotfiles."
+packages = ["hyprlock", "hyprshutdown"]
+aur = ["hyprmon-bin"]
+
+[[unit]]
+id = "desktop-tools"
+parent = "desktop"
+name = "rofi, wlogout, screenshots, clipboard, media keys, notifications"
+about = """
+rofi (launcher and menus), wlogout (power menu), grim, slurp and satty
+(screenshots), wl-clipboard, playerctl, libnotify, brightnessctl,
+pavucontrol, socat and btop, with the rofi and wlogout configs. On ARM, rofi
+2 is built from the Arch Linux PKGBUILD: the repositories stop at 1.7.5,
+X11 only.
+"""
+requires = ["fonts"]
+packages = ["wl-clipboard", "grim", "slurp", "satty", "playerctl", "libnotify",
+            "brightnessctl", "pavucontrol", "socat", "btop",
+            { name = "rofi", when = { arch = "x86_64" } }]
+aur = ["wlogout"]
+files = [
+  { source = "files/rofi", target = ".config/rofi" },
+  { source = "files/wlogout", target = ".config/wlogout" },
+]
+hooks = [{ run = "build_rofi", when = { arch = "aarch64" } }]
+
+[[unit]]
+id = "connectivity"
+parent = "desktop"
+name = "Wi-Fi manager (wlctl) and Bluetooth manager (bluetui)"
+about = """
+Terminal interfaces opened by the Wi-Fi and Bluetooth scripts of the
+Hyprland config, from Waybar and the keybindings. wlctl is built from the
+AUR (wlctl-git) with the passphrase hidden while it is typed.
+"""
+requires = ["network", "bluetooth"]
+packages = ["speedtest-cli", "bluetui"]
+hooks = ["build_wlctl"]
+
+[[unit]]
+id = "wallpaper-engines"
+parent = "desktop"
+name = "Wallpaper engines: awww (images), mpvpaper (videos)"
+about = "What the wallpaper scripts run, with ffmpegthumbnailer for the video thumbnails of the selector."
+packages = ["awww", "ffmpegthumbnailer"]
+aur = ["mpvpaper"]
+
+[[unit]]
+id = "sddm"
+parent = "desktop"
+name = "SDDM login screen with the Tokyo Night theme"
+about = """
+SDDM with the Qt modules of its Tokyo Night theme. Its background is
+background.jpg, written by the wallpaper selector; until one is applied,
+SDDM shows the background color.
+"""
+packages = ["sddm", "qt5-graphicaleffects", "qt5-svg", "qt5-quickcontrols2"]
+aur = ["sddm-theme-tokyo-night-git"]
+services = [{ name = "sddm", force = true }]
+hooks = ["setup_sddm_theme"]
+
+[[unit]]
+id = "cursor"
+parent = "desktop"
+name = "Bibata cursor theme"
+about = "Set by the Hyprland config; the default cursor shows without it."
+aur = ["bibata-cursor-theme"]
+
+[[unit]]
+id = "icons"
+parent = "desktop"
+name = "Papirus-Dark icon theme"
+about = "Applied to GTK apps; rofi picks it from its config (it shows no icons without it)."
+packages = ["papirus-icon-theme", "gsettings-desktop-schemas"]
+hooks = ["apply_icon_theme"]
+
+[[unit]]
+id = "ddcutil"
+parent = "desktop"
+name = "ddcutil: external monitors brightness in the brightness menu"
+about = """
+The brightness menu sets the brightness of external monitors over DDC/CI
+when it is installed. The package loads i2c-dev at boot and grants the
+logged-in user access to the monitors' i2c buses.
+"""
+packages = ["ddcutil"]
+
+[[unit]]
+id = "fonts"
+name = "JetBrains Mono Nerd Font"
+about = "Used by Waybar, mako, rofi, hyprlock and Ghostty; their glyphs show as boxes without it."
+packages = ["ttf-jetbrains-mono-nerd"]

@@ -1,0 +1,49 @@
+[module]
+name = "User"
+about = "Your identity: SSH config and key, Git"
+
+[[unit]]
+id = "ssh"
+name = "SSH client config: agent, keys, hosts in ~/.ssh/config.d"
+about = """
+The SSH client config, and ~/.ssh/config.d for the machine-specific hosts
+and keys (not versioned, included by the config). openssh comes with the
+base packages.
+"""
+files = [{ source = "files/ssh/config", target = ".ssh/config" }]
+hooks = ["create_ssh_config_d"]
+
+[[unit]]
+id = "ssh-key"
+name = "SSH key (standard or FIDO2 security key)"
+about = """
+An ed25519 key, or an ed25519-sk key on a FIDO2 security key: the key is
+downloaded from the security key when it holds one, generated on it
+otherwise. The security key asks for its PIN and a touch through
+ssh-keygen, which needs the terminal.
+"""
+requires = ["ssh"]
+attended = true
+inputs = [
+  { id = "email", prompt = "Email of the SSH key", required = true },
+  { id = "fido", prompt = "Use a security key (FIDO2)?", kind = "bool", default = false },
+  { id = "passphrase", prompt = "Passphrase of the key (empty for none)", kind = "secret" },
+]
+hooks = ["generate_ssh_key"]
+
+[[unit]]
+id = "git"
+name = "Git config, name, email and default branch"
+about = """
+The shared Git config (pager, merges never fast-forwarded, pulls only
+fast-forwarded) linked as ~/.config/git/config; the name, email and
+default branch go to ~/.gitconfig, which Git reads after it.
+"""
+files = [{ source = "files/git/{gitconfig}.gitconfig", target = ".config/git/config" }]
+variants = [{ id = "gitconfig", name = "Git config", options = ["default"] }]
+inputs = [
+  { id = "name", prompt = "Git user name", required = true },
+  { id = "email", prompt = "Git email", required = true },
+  { id = "branch", prompt = "Default branch", default = "main" },
+]
+hooks = ["setup_git"]

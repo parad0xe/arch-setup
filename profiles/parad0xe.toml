@@ -1,0 +1,7 @@
+about = "parad0xe's setup: default keybindings, UK and US layouts"
+extends = "full"
+
+[variants]
+"zsh.zshrc" = "parad0xe"
+"vim.vimrc" = "parad0xe"
+"bin.scripts" = "parad0xe"
