@@ -30,16 +30,20 @@ install_yt_dlp() {
     yay -S --needed --noconfirm --ask 4 yt-dlp-ejs-anyruntime yt-dlp-git --mflags --nocheck
 }
 
-# Enables and starts MPD as a user service. Never the system unit: it runs
-# as user mpd with /etc/mpd.conf, cannot reach the user's music or PipeWire
-# session, and takes port 6600 so the user service could never start.
-# Without a user session (a TTY install), systemctl --user cannot connect:
-# the Hyprland autostart (conf/autostart/music.lua) starts mpd at login.
+# Enables MPD as a user service, which starts it with each login, and
+# restarts it so that it applies its deployed config. Never the system unit:
+# it runs as user mpd with /etc/mpd.conf, cannot reach the user's music or
+# PipeWire session, and takes port 6600 so the user service could never
+# start. Without a reachable user manager (a chroot install), the service is
+# enabled by its link, as systemctl would, and starts at the next login.
 start_mpd_user_service() {
-    if [ -z "${XDG_RUNTIME_DIR-}" ]; then
-        log_info "no user session: mpd starts with the next login"
+    if ! systemctl --user show-environment &> /dev/null; then
+        log_info "no user session: enabling mpd for the next login"
+        mkdir -p "$HOME/.config/systemd/user/default.target.wants"
+        ln -sf /usr/lib/systemd/user/mpd.service "$HOME/.config/systemd/user/default.target.wants/mpd.service"
         return 0
     fi
-    log_info "enabling the mpd user service"
-    systemctl --user enable --now mpd.service
+    log_info "enabling the mpd user service and restarting it on its config"
+    systemctl --user enable mpd.service
+    systemctl --user restart mpd.service
 }
