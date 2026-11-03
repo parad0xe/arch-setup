@@ -25,10 +25,9 @@ name = "getmusic"
 about = "Download music with yt-dlp and organize it with beets into ~/Music; runs on its own, feeds the music server when it is there"
 parent = "mpd"
 packages = ["beets", "ffmpeg", "python-mutagen", "nodejs"]
-aur = ["yt-dlp-ejs-anyruntime"]
 files = [
     { source = "files/beets", target = ".config/beets"},
     { source = "files/yt-dlp", target = ".config/yt-dlp"},
     { source = "files/getmusic", target = ".local/bin", contents = true, permissions = "744"}
 ]
-hooks = ["create_getmusic_folders", "install_yt_dlp_git"]
+hooks = ["create_getmusic_folders", "install_yt_dlp"]

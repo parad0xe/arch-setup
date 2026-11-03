@@ -20,9 +20,14 @@ create_getmusic_folders() {
              ~/.local/bin
 }
 
-install_yt_dlp_git() {
-    log_info "install yt-dlp-git from the AUR (check phase skipped)"
-    yay -S --needed --noconfirm yt-dlp-git --mflags --nocheck
+# yt-dlp-git and yt-dlp-ejs-anyruntime, its JavaScript challenge solver for
+# any runtime (Node.js here: the official yt-dlp-ejs needs Deno), from the
+# AUR without their check phase. They replace the official yt-dlp and
+# yt-dlp-ejs, which conflict with them: --ask 4 answers yes to removing a
+# conflicting package, in the same transaction, which --noconfirm refuses.
+install_yt_dlp() {
+    log_info "install yt-dlp-git and yt-dlp-ejs-anyruntime from the AUR (check phase skipped)"
+    yay -S --needed --noconfirm --ask 4 yt-dlp-ejs-anyruntime yt-dlp-git --mflags --nocheck
 }
 
 # Enables and starts MPD as a user service. Never the system unit: it runs
