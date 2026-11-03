@@ -1,188 +1,176 @@
+-- =============================================================
+-- blink.cmp — completion engine (menu, snippets, signature help).
+-- https://github.com/Saghen/blink.cmp
+--
+-- How it talks to the LSP plugin:
+--   lsp.lua calls require("blink.cmp").get_lsp_capabilities()
+--   so servers know we support resolve/snippets → that is what
+--   makes auto-import work when you accept a completion.
+-- =============================================================
 return {
-    "saghen/blink.cmp",
-    version = "*",
-    dependencies = {
-        -- snippet collection (blink uses it for the snippets source)
-        "rafamadriz/friendly-snippets",
-    },
-    opts = {
-        -- ── Keymaps ─────────────────────────────────────────────────────────
-        keymap = {
-            preset  = "default",
-            ["<Tab>"] = { "accept", "fallback" }, -- Tab confirms
-            ["<CR>"]  = { "fallback" },           -- Enter always = newline, never confirms
-            -- <C-space>     → open / refresh completion menu
-            -- <C-x> / <C-p> → next / previous item
-            -- <C-e>         → close menu
-            ["<C-x>"] = { "select_next", "fallback" },
-            ["<C-p>"] = { "select_prev", "fallback" },
-        },
+	"saghen/blink.cmp",
+	version = "*", -- track the latest stable tag
+	dependencies = {
+		-- Snippet collection (vscode-style JSON) used by the
+		-- "snippets" source; blink renders them natively.
+		"rafamadriz/friendly-snippets",
+	},
 
-        -- ── Appearance ───────────────────────────────────────────────────────
-        appearance = {
-            nerd_font_variant = "mono",
-            -- show a kind icon + label next to each completion item
-            kind_icons = {
-                Text          = "󰉿",
-                Method        = "󰆧",
-                Function      = "󰊕",
-                Constructor   = "",
-                Field         = "󰜢",
-                Variable      = "󰀫",
-                Class         = "󰠱",
-                Interface     = "",
-                Module        = "",
-                Property      = "󰜢",
-                Unit          = "󰑭",
-                Value         = "󰎠",
-                Enum          = "",
-                Keyword       = "󰌋",
-                Snippet       = "",
-                Color         = "󰏘",
-                File          = "󰈙",
-                Reference     = "󰈇",
-                Folder        = "󰉋",
-                EnumMember    = "",
-                Constant      = "󰏿",
-                Struct        = "󰙅",
-                Event         = "",
-                Operator      = "󰆕",
-                TypeParameter = "",
-            },
-        },
+	opts = {
+		-- ── Keymaps ─────────────────────────────────────────────
+		keymap = {
+			preset = "default", -- C-space open, C-e close
+			["<Tab>"] = { "accept", "fallback" }, -- Tab confirms; else falls through (indent/snippet jump)
+			["<CR>"] = { "fallback" }, -- Enter NEVER confirms, always newline
+			["<C-x>"] = { "select_next", "fallback" }, -- next item
+			["<C-p>"] = { "select_prev", "fallback" }, -- previous item
+		},
 
-        -- ── Sources ──────────────────────────────────────────────────────────
-        sources = {
-            default = { "lsp", "path", "snippets", "buffer" },
-        },
+		-- ── Appearance ─────────────────────────────────────────
+		appearance = {
+			nerd_font_variant = "mono", -- pick icons matching your font
+			kind_icons = {
+				Text = "󰉿",
+				Method = "󰆧",
+				Function = "󰊕",
+				Constructor = "",
+				Field = "󰜢",
+				Variable = "󰀫",
+				Class = "󰠱",
+				Interface = "",
+				Module = "",
+				Property = "󰜢",
+				Unit = "󰑭",
+				Value = "󰎠",
+				Enum = "",
+				Keyword = "󰌋",
+				Snippet = "",
+				Color = "󰏘",
+				File = "󰈙",
+				Reference = "󰈇",
+				Folder = "󰉋",
+				EnumMember = "",
+				Constant = "󰏿",
+				Struct = "󰙅",
+				Event = "",
+				Operator = "󰆕",
+				TypeParameter = "",
+			},
+		},
 
-        -- ── Completion ───────────────────────────────────────────────────────
-        completion = {
-            -- Trigger: show menu as soon as you start typing
-            trigger = {
-                show_on_insert_enter    = true,
-                show_on_trigger_character = true,
-            },
+		-- ── Sources ────────────────────────────────────────────
+		-- Order = priority: LSP suggestions first, then path paths,
+		-- then snippets, then plain words found in open buffers.
+		sources = {
+			default = { "lsp", "path", "snippets", "buffer" },
 
-            -- List: how items are sorted and filtered
-            list = {
-                selection = {
-                    preselect   = true,  -- first item is always highlighted
-                    auto_insert = false,
-                },
-            },
+			-- NOTE: no "markview" entry needed — current markview.nvim
+			-- registers its emoji source with blink by itself on
+			-- startup; declaring it here caused "already exists".
+		},
 
-            -- Menu appearance
-            menu = {
-                border      = "rounded",
-                winhighlight = "Normal:BlinkCmpMenu,FloatBorder:BlinkCmpMenuBorder,CursorLine:BlinkCmpMenuSelection",
-                draw = {
-                    -- Show: icon  label  kind  source
-                    columns = {
-                        { "kind_icon", gap = 1 },
-                        { "label", "label_description", gap = 1 },
-                        { "kind", gap = 1 },
-                        { "source_name" },
-                    },
-                },
-            },
+		completion = {
+			-- Show the menu as soon as you type a keyword / a trigger
+			-- character like `.` or `::`. (blink v1 names:
+			-- show_on_keyword, show_on_trigger_character — the old
+			-- show_on_insert_enter no longer exists.)
+			trigger = {
+				show_on_keyword = true,
+				show_on_trigger_character = true,
+			},
 
-            -- Documentation popup
-            documentation = {
-                auto_show          = true,
-                auto_show_delay_ms = 200,
-                window = { border = "rounded" },
-            },
+			-- First item is preselected; confirming inserts it.
+			list = {
+				selection = {
+					preselect = true,
+					auto_insert = false,
+				},
+			},
 
-            -- ── AUTO-IMPORT ──────────────────────────────────────────────────
-            -- This is the key setting for auto-import:
-            -- When you confirm a completion, blink will ask the LSP to resolve
-            -- the full item including any additional text edits (imports, etc.)
-            -- and apply them all at once.
-            accept = {
-                auto_brackets = { enabled = true },
+			-- How each row is drawn: icon | label | kind | source.
+			menu = {
+				border = "rounded",
+				winhighlight = "Normal:BlinkCmpMenu,FloatBorder:BlinkCmpMenuBorder,CursorLine:BlinkCmpMenuSelection",
+				draw = {
+					columns = {
+						{ "kind_icon", gap = 1 },
+						{ "label", "label_description", gap = 1 },
+						{ "kind", gap = 1 },
+						{ "source_name" },
+					},
+				},
+			},
 
-                -- Resolve the completion item before inserting so that
-                -- LSP-side additional edits (auto-imports) are applied.
-                -- Works with ts_ls, pyright, rust_analyzer, clangd.
-                on_accept = function(item)
-                    -- blink v1 API: item.source resolves additional text edits
-                    if item and item.source then
-                        local client = item.source:get_lsp_client()
-                        if client then
-                            client.resolve_completion(item, function(resolved)
-                                if resolved and resolved.additionalTextEdits then
-                                    vim.lsp.util.apply_text_edits(
-                                        resolved.additionalTextEdits,
-                                        vim.api.nvim_get_current_buf(),
-                                        client.offset_encoding
-                                    )
-                                end
-                            end)
-                        end
-                    end
-                end,
-            },
-        },
+			-- Doc popup next to the menu, after a short delay.
+			documentation = {
+				auto_show = true,
+				auto_show_delay_ms = 200,
+				window = { border = "rounded" },
+			},
 
-        -- ── Signature help ───────────────────────────────────────────────────
-        -- Shows function signature (argument names + types) while you type
-        signature = {
-            enabled = true,
-            window  = { border = "rounded" },
-        },
-    },
+			-- Accept behavior. auto_brackets adds () after
+			-- confirming a function. Auto-imports (adding the
+			-- missing `import` line) are handled natively: blink
+			-- resolves the item and applies the server's extra
+			-- text edits — no custom on_accept hook needed.
+			accept = {
+				auto_brackets = { enabled = true },
+			},
+		},
 
-    -- ── LSP capabilities ─────────────────────────────────────────────────────
-    -- This is the OTHER half of auto-import:
-    -- blink must advertise to the LSP that the client supports
-    -- additionalTextEdits and resolveSupport, otherwise the LSP
-    -- won't send import information at all.
-    config = function(_, opts)
-        local blink = require("blink.cmp")
-        blink.setup(opts)
+		-- Function signature popup while typing arguments.
+		signature = {
+			enabled = true,
+			window = { border = "rounded" },
+		},
+	},
 
-        -- ── Theme ─────────────────────────────────────────────────────────────
-        -- Colors matched to your rose-pine + purple noice theme
-        local hl = vim.api.nvim_set_hl
+	-- ── Theming ─────────────────────────────────────────────
+	-- Custom highlights: dark menu + purple accents (overrides
+	-- rose-pine's blink colors — that's intentional, it's the
+	-- "purple noice" look from the old config).
+	config = function(_, opts)
+		require("blink.cmp").setup(opts)
 
-        -- Menu windows
-        hl(0, "BlinkCmpMenu",          { bg = "#1a1a2e" })
-        hl(0, "BlinkCmpMenuBorder",    { fg = "#8024ca", bg = "NONE" })
-        hl(0, "BlinkCmpMenuSelection", { bg = "#6c4791" })
+		local hl = vim.api.nvim_set_hl
 
-        -- Documentation popup
-        hl(0, "BlinkCmpDoc",           { bg = "#1a1a2e" })
-        hl(0, "BlinkCmpDocBorder",     { fg = "#8024ca", bg = "NONE" })
+		-- Menu windows
+		hl(0, "BlinkCmpMenu", { bg = "#1a1a2e" })
+		hl(0, "BlinkCmpMenuBorder", { fg = "#8024ca", bg = "NONE" })
+		hl(0, "BlinkCmpMenuSelection", { bg = "#6c4791" })
 
-        -- Signature help
-        hl(0, "BlinkCmpSignatureHelp",       { bg = "#1a1a2e" })
-        hl(0, "BlinkCmpSignatureHelpBorder", { fg = "#8024ca", bg = "NONE" })
+		-- Documentation popup
+		hl(0, "BlinkCmpDoc", { bg = "#1a1a2e" })
+		hl(0, "BlinkCmpDocBorder", { fg = "#8024ca", bg = "NONE" })
 
-        -- Kind icon colors per completion type
-        hl(0, "BlinkCmpKindFunction",    { fg = "#ff79c6" })
-        hl(0, "BlinkCmpKindMethod",      { fg = "#ff79c6" })
-        hl(0, "BlinkCmpKindConstructor", { fg = "#ff79c6" })
-        hl(0, "BlinkCmpKindVariable",    { fg = "#bd93f9" })
-        hl(0, "BlinkCmpKindField",       { fg = "#bd93f9" })
-        hl(0, "BlinkCmpKindProperty",    { fg = "#bd93f9" })
-        hl(0, "BlinkCmpKindKeyword",     { fg = "#8be9fd" })
-        hl(0, "BlinkCmpKindOperator",    { fg = "#8be9fd" })
-        hl(0, "BlinkCmpKindSnippet",     { fg = "#f1fa8c" })
-        hl(0, "BlinkCmpKindFile",        { fg = "#50fa7b" })
-        hl(0, "BlinkCmpKindFolder",      { fg = "#50fa7b" })
-        hl(0, "BlinkCmpKindModule",      { fg = "#ffb86c" })
-        hl(0, "BlinkCmpKindClass",       { fg = "#ffb86c" })
-        hl(0, "BlinkCmpKindStruct",      { fg = "#ffb86c" })
-        hl(0, "BlinkCmpKindInterface",   { fg = "#ffb86c" })
-        hl(0, "BlinkCmpKindConstant",    { fg = "#ff5555" })
-        hl(0, "BlinkCmpKindEnum",        { fg = "#ff5555" })
-        hl(0, "BlinkCmpKindEnumMember",  { fg = "#ff5555" })
-        hl(0, "BlinkCmpKindText",        { fg = "#f8f8f2" })
-        hl(0, "BlinkCmpKindValue",       { fg = "#f8f8f2" })
-        hl(0, "BlinkCmpKindUnit",        { fg = "#f8f8f2" })
-        hl(0, "BlinkCmpKindColor",       { fg = "#f8f8f2" })
-        hl(0, "BlinkCmpKindReference",   { fg = "#f8f8f2" })
-        hl(0, "BlinkCmpKindTypeParameter", { fg = "#8be9fd" })
-    end,
+		-- Signature help
+		hl(0, "BlinkCmpSignatureHelp", { bg = "#1a1a2e" })
+		hl(0, "BlinkCmpSignatureHelpBorder", { fg = "#8024ca", bg = "NONE" })
+
+		-- Kind icon colors (what each completion *is*)
+		hl(0, "BlinkCmpKindFunction", { fg = "#ff79c6" })
+		hl(0, "BlinkCmpKindMethod", { fg = "#ff79c6" })
+		hl(0, "BlinkCmpKindConstructor", { fg = "#ff79c6" })
+		hl(0, "BlinkCmpKindVariable", { fg = "#bd93f9" })
+		hl(0, "BlinkCmpKindField", { fg = "#bd93f9" })
+		hl(0, "BlinkCmpKindProperty", { fg = "#bd93f9" })
+		hl(0, "BlinkCmpKindKeyword", { fg = "#8be9fd" })
+		hl(0, "BlinkCmpKindOperator", { fg = "#8be9fd" })
+		hl(0, "BlinkCmpKindSnippet", { fg = "#f1fa8c" })
+		hl(0, "BlinkCmpKindFile", { fg = "#50fa7b" })
+		hl(0, "BlinkCmpKindFolder", { fg = "#50fa7b" })
+		hl(0, "BlinkCmpKindModule", { fg = "#ffb86c" })
+		hl(0, "BlinkCmpKindClass", { fg = "#ffb86c" })
+		hl(0, "BlinkCmpKindStruct", { fg = "#ffb86c" })
+		hl(0, "BlinkCmpKindInterface", { fg = "#ffb86c" })
+		hl(0, "BlinkCmpKindConstant", { fg = "#ff5555" })
+		hl(0, "BlinkCmpKindEnum", { fg = "#ff5555" })
+		hl(0, "BlinkCmpKindEnumMember", { fg = "#ff5555" })
+		hl(0, "BlinkCmpKindText", { fg = "#f8f8f2" })
+		hl(0, "BlinkCmpKindValue", { fg = "#f8f8f2" })
+		hl(0, "BlinkCmpKindUnit", { fg = "#f8f8f2" })
+		hl(0, "BlinkCmpKindColor", { fg = "#f8f8f2" })
+		hl(0, "BlinkCmpKindReference", { fg = "#f8f8f2" })
+		hl(0, "BlinkCmpKindTypeParameter", { fg = "#8be9fd" })
+	end,
 }

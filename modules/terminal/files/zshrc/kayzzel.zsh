@@ -11,7 +11,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 
 ########################################
 # Zinit Plugin Manager Setup
@@ -144,7 +144,7 @@ eval "$(fzf --zsh)"
 eval "$(zoxide init --cmd cd zsh)"
 
 # Show system info only in interactive shells
-[[ $- == *i* ]] && command -v fastfetch > /dev/null && fastfetch
+[[ $- == *i* ]] && fastfetch
 
 # --- NVM ---
 if [ -f /usr/share/nvm/init-nvm.sh ]; then
@@ -165,6 +165,7 @@ export EDITOR="vim"
 alias ls='ls --color'           # colored ls output
 alias c="clear"                  # clear terminal
 alias x="exit"                   # exit shell
+alias zshreload="source ~/.zshrc" # reload zshrc
 
 # Workflow / tools
 alias cm="clear; fastfetch"       # clear + show system info

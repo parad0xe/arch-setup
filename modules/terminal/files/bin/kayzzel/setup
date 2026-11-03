@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+# Workspace 1: Brave with profile "Kayzzel"
+hyprctl dispatch 'hl.dsp.exec_cmd([[brave --profile-directory="Profile 1"]], { workspace = [[1 silent]] })'
+
+# Workspace 2: Ghostty running with startup
+hyprctl dispatch 'hl.dsp.exec_cmd([[ghostty -e zsh -ic "startup; exec zsh"]], { workspace = [[2 silent]] })'
+
+# Workspace 3: Brave with another "home"
+hyprctl dispatch 'hl.dsp.exec_cmd([[brave --profile-directory="Profile 2"]], { workspace = [[3 silent]] })'

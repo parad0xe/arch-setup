@@ -21,11 +21,13 @@ files = [
   { source = "files/hypr", target = ".config/hypr", contents = true },
   { source = "files/hypr/conf/keybinds/{keybinds}.lua", target = ".config/hypr/keybinds.lua" },
   { source = "files/hypr/conf/keyboard/{keyboard}.lua", target = ".config/hypr/keyboard.lua" },
+  { source = "files/hypr/conf/autostart/{autostart}.lua", target = ".config/hypr/conf/autostart.lua"},
   { source = "files/mako", target = ".config/mako" },
 ]
 variants = [
   { id = "keybinds", name = "Hyprland keybindings", options = ["default", "vim"] },
   { id = "keyboard", name = "Keyboard layout", options = ["default", "vim"] },
+  { id = "autostart", name = "Autostart scripts", options = ["default", "music"] },
 ]
 hooks = ["restart_desktop_portal"]
 

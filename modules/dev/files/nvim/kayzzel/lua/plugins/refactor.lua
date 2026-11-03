@@ -1,84 +1,138 @@
+-- =============================================================
+-- refactoring.nvim (ThePrimeagen) — programmatic refactors:
+-- extract function/variable, inline them, plus debug prints.
+-- Treesitter-driven: needs a parser for the language
+-- (see treesitter.lua); works on visual selections, and in
+-- normal mode asks for a textobject (e.g. `<leader>re iw`).
+--
+-- API note (2025 rewrite): the old string API —
+--   require("refactoring").refactor("Extract Function")
+-- — no longer exists; the plugin now exports dedicated
+-- functions (extract_func(), extract_var(), ...). Same for
+-- debug: printf() became print_var/print_exp/print_loc.
+-- `extract_block` was removed upstream, so the old <leader>rb /
+-- <leader>rB binds have no replacement.
+-- =============================================================
 return {
-  "ThePrimeagen/refactoring.nvim",
-  dependencies = {
-    "nvim-lua/plenary.nvim",
-    "nvim-treesitter/nvim-treesitter",
-	"lewis6991/async.nvim",
-  },
-  lazy = false,
+	"ThePrimeagen/refactoring.nvim",
+	dependencies = {
+		"nvim-lua/plenary.nvim",
+		"lewis6991/async.nvim", -- required: provides the async() module
+	},
 
-  keys = {
-    { "<leader>re", mode = { "n", "x" }, desc = "Extract Function" },
-    { "<leader>rE", mode = { "n", "x" }, desc = "Extract Function To File" },
-    { "<leader>rv", mode = { "n", "x" }, desc = "Extract Variable" },
-    { "<leader>ri", mode = { "n", "x" }, desc = "Inline Variable" },
-    { "<leader>rI", mode = { "n" },      desc = "Inline Function" },
-    { "<leader>rb", mode = { "n", "x" }, desc = "Extract Block" },
-    { "<leader>rB", mode = { "n", "x" }, desc = "Extract Block To File" },
-    { "<leader>rr", mode = { "n", "x" }, desc = "Select Refactor (Telescope)" },
-    { "<leader>rp", mode = { "n" },      desc = "Debug: Printf above" },
-    { "<leader>rP", mode = { "n" },      desc = "Debug: Printf below" },
-    { "<leader>rd", mode = { "n", "x" }, desc = "Debug: Print Var" },
-    { "<leader>rc", mode = { "n" },      desc = "Debug: Cleanup prints" },
-  },
+	keys = {
+		-- ── Refactorings ───────────────────────────────────────
+		-- expr = true is required: the function RETURNS a key
+		-- sequence (in normal mode, the textobject to capture).
+		{
+			"<leader>re",
+			mode = { "n", "x" },
+			function()
+				return require("refactoring").extract_func()
+			end,
+			expr = true,
+			desc = "Refactor: extract function",
+		},
+		{
+			"<leader>ree",
+			mode = { "n" },
+			function()
+				return require("refactoring").extract_func() .. "_"
+			end,
+			expr = true,
+			desc = "Refactor: extract function (line)",
+		},
+		{
+			"<leader>rE",
+			mode = { "n", "x" },
+			function()
+				return require("refactoring").extract_func_to_file()
+			end,
+			expr = true,
+			desc = "Refactor: extract function to file",
+		},
+		{
+			"<leader>rv",
+			mode = { "n", "x" },
+			function()
+				return require("refactoring").extract_var()
+			end,
+			expr = true,
+			desc = "Refactor: extract variable",
+		},
+		{
+			"<leader>rvv",
+			mode = { "n" },
+			function()
+				return require("refactoring").extract_var() .. "_"
+			end,
+			expr = true,
+			desc = "Refactor: extract variable (line)",
+		},
+		{
+			"<leader>ri",
+			mode = { "n", "x" },
+			function()
+				return require("refactoring").inline_var()
+			end,
+			expr = true,
+			desc = "Refactor: inline variable",
+		},
+		{
+			"<leader>rI",
+			mode = { "n", "x" },
+			function()
+				return require("refactoring").inline_func()
+			end,
+			expr = true,
+			desc = "Refactor: inline function",
+		},
 
-	config = function()
-	  require("refactoring").setup({
-		show_success_message = true,
-		prompt_func_return_type = { go = true, cpp = true, c = true, java = true },
-		prompt_func_param_type  = { go = true, cpp = true, c = true, java = true },
-	  })
+		-- ── Picker ─────────────────────────────────────────────
+		{
+			"<leader>rr",
+			mode = { "n", "x" },
+			function()
+				require("refactoring").select_refactor()
+			end,
+			desc = "Refactor: pick from list",
+		},
 
-	  -- ── Refactoring ───────────────────────────────────────────────────────
-	  vim.keymap.set({ "n", "x" }, "<leader>re",
-		function() return require("refactoring").refactor("Extract Function") end,
-		{ expr = true, desc = "Refactor: Extract Function" })
+		-- ── Debug prints ───────────────────────────────────────
+		-- print_var inserts a print of the var under cursor (n:
+		-- appends "iw" to capture the word); cleanup removes all
+		-- debug prints it inserted (marked in comments).
+		{
+			"<leader>rd",
+			mode = { "x", "n" },
+			function()
+				return require("refactoring.debug").print_var({ output_location = "below" })
+					.. "iw"
+			end,
+			expr = true,
+			desc = "Debug: print var below",
+		},
+		{
+			"<leader>rp",
+			mode = { "x", "n" },
+			function()
+				return require("refactoring.debug").print_var({ output_location = "above" })
+					.. "iw"
+			end,
+			expr = true,
+			desc = "Debug: print var above",
+		},
+		{
+			"<leader>rc",
+			mode = { "n" },
+			function()
+				require("refactoring.debug").cleanup({})
+			end,
+			desc = "Debug: cleanup prints",
+		},
+	},
 
-	  vim.keymap.set({ "n", "x" }, "<leader>rE",
-		function() return require("refactoring").refactor("Extract Function To File") end,
-		{ expr = true, desc = "Refactor: Extract Function To File" })
-
-	  vim.keymap.set({ "n", "x" }, "<leader>rv",
-		function() return require("refactoring").refactor("Extract Variable") end,
-		{ expr = true, desc = "Refactor: Extract Variable" })
-
-	  vim.keymap.set({ "n", "x" }, "<leader>ri",
-		function() return require("refactoring").refactor("Inline Variable") end,
-		{ expr = true, desc = "Refactor: Inline Variable" })
-
-	  vim.keymap.set("n", "<leader>rI",
-		function() return require("refactoring").refactor("Inline Function") end,
-		{ expr = true, desc = "Refactor: Inline Function" })
-
-	  vim.keymap.set({ "n", "x" }, "<leader>rb",
-		function() return require("refactoring").refactor("Extract Block") end,
-		{ expr = true, desc = "Refactor: Extract Block" })
-
-	  vim.keymap.set({ "n", "x" }, "<leader>rB",
-		function() return require("refactoring").refactor("Extract Block To File") end,
-		{ expr = true, desc = "Refactor: Extract Block To File" })
-
-	  -- ── Telescope picker ──────────────────────────────────────────────────
-	  vim.keymap.set({ "n", "x" }, "<leader>rr", function()
-		require("telescope").load_extension("refactoring")
-		require("telescope").extensions.refactoring.refactors()
-	  end, { desc = "Refactor: Select (Telescope)" })
-
-	  -- ── Debug ─────────────────────────────────────────────────────────────
-	  vim.keymap.set("n", "<leader>rp",
-		function() require("refactoring").debug.printf({ below = false }) end,
-		{ desc = "Debug: Printf (above)" })
-
-	  vim.keymap.set("n", "<leader>rP",
-		function() require("refactoring").debug.printf({ below = true }) end,
-		{ desc = "Debug: Printf (below)" })
-
-	  vim.keymap.set({ "n", "x" }, "<leader>rd",
-		function() require("refactoring").debug.print_var() end,
-		{ desc = "Debug: Print Var" })
-
-	  vim.keymap.set("n", "<leader>rc",
-		function() require("refactoring").debug.cleanup({}) end,
-		{ desc = "Debug: Cleanup prints" })
-	end,
+	opts = {
+		show_success_message = true, -- notify after each refactoring
+	},
 }

@@ -76,5 +76,5 @@ packages = ["yazi"]
 id = "bin"
 name = "Personal scripts in ~/.local/bin"
 about = "Copied with execute permissions; the folder keeps its other scripts."
-files = [{ source = "files/bin/{scripts}", target = ".local/bin", contents = true, permissions = "755" }]
-variants = [{ id = "scripts", name = "Personal scripts", options = ["default", "parad0xe"] }]
+files = [{ source = "files/bin/{scripts}", target = ".local/bin", contents = true, permissions = "744" }]
+variants = [{ id = "scripts", name = "Personal scripts", options = ["default", "parad0xe", "kayzzel"] }]

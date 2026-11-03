@@ -156,7 +156,7 @@ setup new <dir> [--public] create a repository of modules (see below)
       --config <UNIT>        redeploy the configs of this unit: the screens open on its
                              variants, files only (repeatable)
       --ascii                plain symbols and borders (the Linux console)
-      --windows              what the setup has to say to Windows
+      --windows              start the installation that can be done for windows
 ```
 
 With `--files-only`, only the configs are deployed: the screens list the

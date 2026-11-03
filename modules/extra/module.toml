@@ -1,0 +1,34 @@
+[module]
+name = "Extra"
+about = "Extra module that doesn't belong to any categories"
+
+[[unit]]
+id = "mpd"
+name = "Music server"
+about = "Download and setup a local music server"
+packages = ["mpd", "mpc"]
+files = [{ source = "files/mpd", target = ".config/mpd"}]
+hooks = ["create_mpd_folders", "expand_mpd_paths", "start_mpd_user_service"]
+
+[[unit]]
+id = "rmpc"
+name = "rmpc"
+about = "Rust music player for mpd music server"
+parent = "mpd"
+requires = ["mpd"]
+aur = ["rmpc"]
+files = [{ source = "files/rmpc", target = ".config/rmpc"}]
+
+[[unit]]
+id = "getmusic"
+name = "getmusic"
+about = "Download music with yt-dlp and organize it with beets into ~/Music; runs on its own, feeds the music server when it is there"
+parent = "mpd"
+packages = ["beets", "ffmpeg", "python-mutagen", "nodejs"]
+aur = ["yt-dlp-ejs-anyruntime"]
+files = [
+    { source = "files/beets", target = ".config/beets"},
+    { source = "files/yt-dlp", target = ".config/yt-dlp"},
+    { source = "files/getmusic", target = ".local/bin", contents = true, permissions = "744"}
+]
+hooks = ["create_getmusic_folders", "install_yt_dlp_git"]

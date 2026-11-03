@@ -101,3 +101,5 @@ hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/
 hl.bind("SUPER + N", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/wifi.sh"))
 -- Bluetooth
 hl.bind("SUPER + B", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/bluetooth.sh"))
+-- Music player
+hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/music.sh"))
