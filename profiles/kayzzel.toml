@@ -5,7 +5,7 @@ exclude = ["keepass"]
 [variants]
 "desktop.keybinds" = "vim"
 "desktop.keyboard" = "vim"
-"desktop.autostart" = "kayzzel"
+"desktop.autostart" = "music"
 "zsh.zshrc" = "kayzzel"
 "bin.scripts" = "kayzzel"
 "vim.vimrc" = "kayzzel"
