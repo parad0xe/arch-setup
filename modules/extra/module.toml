@@ -7,7 +7,7 @@ id = "mpd"
 name = "Music server"
 about = "Download and setup a local music server"
 packages = ["mpd", "mpc"]
-files = [{ source = "files/mpd", target = ".config/mpd", backup = true}]
+files = [{ source = "files/mpd", target = ".config/mpd"}]
 hooks = ["create_mpd_folders", "expand_mpd_paths", "start_mpd_user_service"]
 
 [[unit]]
@@ -17,7 +17,7 @@ about = "Rust music player for mpd music server"
 parent = "mpd"
 requires = ["mpd"]
 aur = ["rmpc"]
-files = [{ source = "files/rmpc", target = ".config/rmpc", backup = true}]
+files = [{ source = "files/rmpc", target = ".config/rmpc"}]
 
 [[unit]]
 id = "getmusic"
@@ -27,8 +27,8 @@ parent = "mpd"
 packages = ["beets", "ffmpeg", "python-mutagen", "nodejs"]
 aur = ["yt-dlp-ejs-anyruntime"]
 files = [
-    { source = "files/beets", target = ".config/beets", backup = true},
-    { source = "files/yt-dlp", target = ".config/yt-dlp", backup = true},
-    { source = "files/getmusic", target = ".local/bin", contents = true, permissions = "744", backup = true}
+    { source = "files/beets", target = ".config/beets"},
+    { source = "files/yt-dlp", target = ".config/yt-dlp"},
+    { source = "files/getmusic", target = ".local/bin", contents = true, permissions = "744"}
 ]
 hooks = ["create_getmusic_folders", "install_yt_dlp_git"]
