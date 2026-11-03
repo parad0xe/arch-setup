@@ -27,7 +27,7 @@ files = [
 variants = [
   { id = "keybinds", name = "Hyprland keybindings", options = ["default", "vim"] },
   { id = "keyboard", name = "Keyboard layout", options = ["default", "vim"] },
-  { id = "autostart", name = "Autostart scripts", options = ["default", "kayzzel"] },
+  { id = "autostart", name = "Autostart scripts", options = ["default", "music"] },
 ]
 hooks = ["restart_desktop_portal"]
 
