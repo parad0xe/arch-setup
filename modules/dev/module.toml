@@ -8,9 +8,13 @@ name = "Python via pyenv, uv, pyright, flake8, mypy"
 about = """
 pyenv with tk (for tkinter; the other libraries it builds Python with come
 with the base system), the latest stable Python as the global version, uv,
-and the pyright, flake8 and mypy tools.
+and the pyright, flake8 and mypy tools. A makepkg setting keeps building
+the AUR packages with the system Python.
 """
 packages = ["tk", "uv", "pyenv"]
+files = [
+  { source = "files/makepkg.conf", target = ".config/pacman/makepkg.conf", backup = true },
+]
 hooks = ["setup_python"]
 
 [[unit]]
