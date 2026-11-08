@@ -1,162 +1,849 @@
-#!/usr/bin/env bash
-#
-# getmusic — download music with yt-dlp and process it into the MPD library with beets.
-#
-# Usage:
-#   getmusic <url>...        Download and auto-import (best for albums and single tracks)
-#   getmusic -t <url>...     Import tracks as individual singles (best for mixed-artist playlists)
-#   getmusic -i <url>...     Interactive: you pick the correct release on ambiguous matches
-#   getmusic inbox [-i|-t]   Re-run the import on files left in the inbox
-#   getmusic list            Show leftover inbox files
-#   getmusic clean           Empty the inbox (asks for confirmation)
-#
-# Works with anything yt-dlp supports: YouTube / YouTube Music, SoundCloud,
-# Bandcamp, archive.org, Vimeo, ... (full list: yt-dlp --list-extractors)
+#!/usr/bin/env python3
+"""getmusic — download music with yt-dlp, import it with beets, and turn
+playlist downloads into real MPD playlists (M3U) that show up in rmpc.
 
-set -u
+Usage:
+  getmusic [options] <url>...           Download → tag → import → M3U
+  getmusic inbox [-t|-a|-i] [-p NAME]   Re-import files left in the inbox
+  getmusic playlist NAME [QUERY...]     Create/append a playlist from a beets query
+  getmusic playlists                    List stored playlists with track counts
+  getmusic rmplaylist [-f] NAME...      Delete stored playlists (music is kept)
+  getmusic list                         Show leftover inbox files
+  getmusic clean                        Empty the inbox (asks for confirmation)
 
-INBOX="${HOME}/.local/share/getmusic/inbox"
+Download options:
+  -t, --singles        Import every track as an individual single (Singles/)
+  -a, --album          Import the playlist as one album
+  -i, --interactive    Pick releases yourself when MusicBrainz can't decide
+  -p, --playlist NAME  Use NAME as the playlist name (also makes one-off song
+                       downloads land in that playlist)
+  -n, --no-playlist    Don't write any M3U playlist for this download
+      --replace        Overwrite the playlist instead of merging into it
 
-usage() { sed -n '2,16p' "$0" | tr -s '#' ' ' ; exit "${1:-0}"; }
+Playlists become ~/Music/Playlists/<Name>.m3u — MPD stored playlists that
+reference songs where they live, no copies, visible immediately in rmpc
+(Playlists tab) alongside your library. Getmusic picks the import mode
+per download: real albums / single-artist collections become one album,
+mixed-artist playlists and one-off videos become singles.
 
-singleton=0
-interactive=0
-while getopts ":tih" opt; do
-    case $opt in
-        t) singleton=1 ;;
-        i) interactive=1 ;;
-        h|*) usage 0 ;;
-    esac
-done
-shift $((OPTIND - 1))
+Works with anything yt-dlp supports: YouTube / YouTube Music, SoundCloud,
+Bandcamp, archive.org, Vimeo, ... (full list: yt-dlp --list-extractors)
+"""
 
-mkdir -p "$INBOX"
+import argparse
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from collections import Counter, defaultdict
+from pathlib import Path
 
-beet_import() {
-    local flags=()
-    (( singleton )) && flags+=( -t )
-    (( interactive )) || flags+=( -q )
-    beet import "${flags[@]}" "$1"
-    # Fallback for what MusicBrainz can't confidently match:
-    # import as-is, keeping the metadata embedded by the download source.
-    if (( ! interactive )); then
-        local left
-        left=$(find_audio | wc -l)
-        if (( left > 0 )); then
-            echo "==> $left file(s) unmatched - importing as-is (keeping embedded metadata)"
-            local aflags=( -A -q )
-            (( singleton )) && aflags+=( -t )
-            beet import "${aflags[@]}" "$1" || true
-        fi
-    fi
-}
+HOME = Path.home()
+INBOX = HOME / ".local/share/getmusic/inbox"
 
-# List only actual audio files in the inbox (thumbnails etc. excluded)
-find_audio() {
-    find "$INBOX" -type f \( \
-        -iname '*.mp3'  -o -iname '*.flac' -o -iname '*.m4a'  -o -iname '*.aac' \
-        -o -iname '*.opus' -o -iname '*.ogg' -o -iname '*.wav'  -o -iname '*.wma' \
-        -o -iname '*.aif' -o -iname '*.aiff' \
-    \) "$@"
-}
+AUDIO_EXTS = {".mp3", ".flac", ".m4a", ".aac", ".opus", ".ogg", ".oga",
+              ".wav", ".wma", ".aif", ".aiff"}
+IMAGE_EXTS = {".webp", ".jpg", ".jpeg", ".png"}
 
-case "${1:-}" in
-    list)
-        find "$INBOX" -type f -printf "   %P\n"
-        exit 0
-        ;;
-    clean)
-        read -rp "Delete ALL files in $INBOX? [y/N] " ans
-        if [[ ${ans:-n} == [Yy]* ]]; then
-            rm -rf "$INBOX" && echo "Inbox emptied."
-        else
-            echo "Aborted, nothing deleted."
-        fi
-        exit 0
-        ;;
-    inbox)
-        shift
-        while getopts ":tih" opt; do
-            case $opt in
-                t) singleton=1 ;;
-                i) interactive=1 ;;
-                h|*) usage 0 ;;
-            esac
-        done
-        beet_import "$INBOX"
-        exit 0
-        ;;
-    "") usage 1 ;;
-esac
+# yt-dlp writes one TSV line per downloaded file. The index/count are anchored
+# left, duration/filepath right, so a stray tab in a title or artist can only
+# shift free-text fields in the middle.
+TSV_TEMPLATE = ("after_move:%(playlist_index)s\t%(playlist_count)s"
+                "\t%(playlist_title)s\t%(artist)s\t%(title)s\t%(duration)s"
+                "\t%(filepath)s")
+OUT_TEMPLATE = ("%(playlist_title|Singles)s/%(playlist_autonumber|single)s - "
+                "%(title)s [%(id)s].%(ext)s")
 
-echo "==> Downloading..."
-paths_file=$(mktemp)
-yt-dlp \
-    -x \
-    --ignore-errors \
-    --no-update \
-    --embed-metadata \
-    --embed-thumbnail \
-    --print-to-file "after_move:filepath" "$paths_file" \
-    -o "$INBOX/%(playlist_title|Singles)s/%(title)s.%(ext)s" \
-    "$@"
-echo
+IS_TTY = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
 
-# Thumbnails left over from failed downloads are junk in the inbox
-find "$INBOX" -type f \( -iname '*.webp' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) -delete
-find "$INBOX" -mindepth 1 -type d -empty -delete
 
-# Embed track numbers (in download order) and album artist where missing:
-# YouTube Music albums carry neither, and beets needs both for album matching.
-python3 - "$paths_file" <<'PYEOF'
-import collections, sys
-from mutagen import File
-audio = ('.mp3', '.flac', '.m4a', '.aac', '.opus', '.ogg', '.wav', '.wma', '.aiff')
-with open(sys.argv[1]) as fh:
-    paths = [l.strip() for l in fh if l.strip().lower().endswith(audio)]
-totals = collections.Counter(p.rsplit('/', 1)[0] for p in paths)
-seen = collections.Counter()
-tagged = 0
-for p in paths:
+def c(text, code):
+    return f"\033[{code}m{text}\033[0m" if IS_TTY else str(text)
+
+
+def info(msg):
+    print(c("==>", "1;36"), msg, flush=True)
+
+
+def warn(msg):
+    print(c("!!", "1;33"), msg, flush=True)
+
+
+def ok(msg):
+    print(c("OK", "1;32") + " -", msg, flush=True)
+
+
+def run(cmd, capture=True, check=False):
+    """Run a command: captured by default, or streamed with capture=False."""
+    return subprocess.run(cmd, capture_output=capture, text=True, check=check)
+
+
+# --------------------------------------------------------------- configuration
+
+def music_dir():
+    """The beets library directory."""
     try:
-        f = File(p, easy=True)
-    except Exception:
-        continue
-    if f is None:
-        continue
-    folder, changed = p.rsplit('/', 1)[0], False
-    seen[folder] += 1
-    if totals[folder] > 1 and not f.get('tracknumber'):
-        f['tracknumber'] = str(seen[folder]); changed = True
-    if f.get('artist') and not f.get('albumartist'):
-        f['albumartist'] = f['artist']; changed = True
-    if changed:
+        out = run(["beet", "config"]).stdout
+        for line in out.splitlines():
+            if line.strip().startswith("directory:"):
+                return Path(line.split(":", 1)[1].strip()).expanduser()
+    except OSError:
+        pass
+    return HOME / "Music"
+
+
+def playlist_dir():
+    """MPD's playlist directory — where .m3u files live so rmpc sees them."""
+    conf = HOME / ".config/mpd/mpd.conf"
+    try:
+        for line in conf.read_text().splitlines():
+            m = re.match(r'\s*playlist_directory\s+"([^"]+)"', line)
+            if m:
+                return Path(m.group(1))
+    except OSError:
+        pass
+    return music_dir() / "Playlists"
+
+
+def init_dirs():
+    global MUSIC, PLAYLISTS
+    if "MUSIC" in globals():
+        return
+    MUSIC = music_dir()
+    PLAYLISTS = playlist_dir()
+    PLAYLISTS.mkdir(parents=True, exist_ok=True)
+
+
+# ---------------------------------------------------------------- helpers
+
+def find_audio(root=None):
+    root = Path(root) if root else INBOX
+    return sorted(p for p in root.rglob("*")
+                  if p.is_file() and p.suffix.lower() in AUDIO_EXTS)
+
+
+def is_audio(path):
+    return Path(path).suffix.lower() in AUDIO_EXTS
+
+
+def sanitize_name(name):
+    """Filesystem-safe, still human, playlist name."""
+    name = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "_", name)
+    name = re.sub(r"\s+", " ", name).strip(" .")
+    return name[:100] or "Playlist"
+
+
+def norm_title(s):
+    return re.sub(r"[^a-z0-9]+", "", (s or "").lower())
+
+
+def track_sort_key(path):
+    """Natural sort of a file name (01 ... 02 ... 10)."""
+    return [int(t) if t.isdigit() else t.lower()
+            for t in re.split(r"(\d+)", Path(path).name)]
+
+
+def list_files(arg=None):
+    """Pretty-print leftover inbox files relative to the inbox."""
+    files = find_audio()
+    if not files:
+        print("Inbox is empty.")
+        return 0
+    for p in files:
+        print(f"   {p.relative_to(INBOX)}")
+    return len(files)
+
+
+# ---------------------------------------------------------------- tag handling
+
+def scan_tags(paths):
+    """{path: artist/album/albumartist/length} per file (never raises)."""
+    tags = {}
+    try:
+        from mutagen import File
+    except ImportError:
+        return tags
+    for p in paths:
+        entry = {"artist": "", "album": "", "albumartist": "", "title": "",
+                 "length": None}
         try:
-            f.save(); tagged += 1
+            f = File(str(p), easy=False)
+            if f is not None:
+                entry["length"] = f.info.length
+            f = File(str(p), easy=True)
+            if f is not None:
+                for key in ("artist", "album", "albumartist", "title"):
+                    v = f.get(key)
+                    if v:
+                        entry[key] = str(v[0] if isinstance(v, list) else v)
         except Exception:
             pass
-if tagged:
-    print(f"==> Tagged track numbers/album artist on {tagged} file(s)")
-PYEOF
-rm -f "$paths_file"
+        tags[str(p)] = entry
+    return tags
 
-audio=$(find_audio | wc -l)
-if (( audio == 0 )); then
-    echo "!! No audio files in the inbox - the download failed (see errors above)."
-    echo "   Fixes to try: sudo pacman -Syu     (refresh yt-dlp)"
-    echo "                sudo pacman -S deno   (JS runtime required for YouTube)"
-    exit 1
-fi
 
-echo "==> Importing into beets / MPD library..."
-beet_import "$INBOX"
-echo
+def tag_group(group, mode):
+    """Inject track numbers / album artist / album where missing."""
+    try:
+        from mutagen import File
+    except ImportError:
+        warn("mutagen missing — skipping tag injection (beets may skip albums)")
+        return
+    files = [r["path"] for r in group.rows]
+    order = {str(p): i + 1 for i, p in enumerate(files)}
+    tagged = 0
+    for p in files:
+        try:
+            f = File(str(p), easy=True)
+        except Exception:
+            continue
+        if f is None:
+            continue
+        changed = False
+        if mode == "album" and len(files) > 1 and not f.get("tracknumber"):
+            f["tracknumber"] = str(order[str(p)])
+            changed = True
+        if f.get("artist") and not f.get("albumartist"):
+            v = f["artist"]
+            f["albumartist"] = v[0] if isinstance(v, list) else v
+            changed = True
+        if mode == "album" and group.name and not f.get("album"):
+            f["album"] = group.name
+            changed = True
+        if changed:
+            try:
+                f.save()
+                tagged += 1
+            except Exception:
+                pass
+    if tagged:
+        info(f"Filled in missing track numbers / album artist / album on"
+             f" {tagged} file(s)")
 
-left=$(find_audio | wc -l)
-if (( left > 0 )); then
-    echo "!! $left file(s) could not be auto-matched and remain in the inbox:"
-    find_audio -printf "   %P\n" | head -20
-    echo "   Pick releases yourself with: getmusic inbox -i"
-else
-    echo "OK - inbox empty, everything was imported. MPD library updated automatically."
-fi
+
+# ---------------------------------------------------------------- grouping
+
+class Group:
+    """One download unit: a playlist, or a lone one-off track."""
+
+    def __init__(self, name, is_playlist):
+        self.name = name              # playlist title, or None for singles
+        self.is_playlist = is_playlist
+        self.rows = []                # idx, title, artist, duration, path, tags
+
+    def files(self):
+        return [r["path"] for r in self.rows]
+
+
+def parse_tsv(tsv_path):
+    """Group the yt-dlp report by playlist; keep playlist order."""
+    groups = {}
+    order = []
+    with open(tsv_path, encoding="utf-8", errors="replace") as fh:
+        for raw in fh:
+            line = raw.rstrip("\n")
+            if not line.strip():
+                continue
+            t = line.split("\t")
+            if len(t) < 7:
+                continue
+            path = Path(t[-1])
+            if not path.exists() or not is_audio(path):
+                continue
+            try:
+                duration = float(t[-2])
+            except ValueError:
+                duration = None
+            pl_title = t[2] if t[2] != "NA" else ""
+            is_playlist = t[1] != "NA" and bool(pl_title)
+            try:
+                idx = int(t[0])
+            except ValueError:
+                idx = None
+            if is_playlist:
+                key = f"pl:{path.parent}|{pl_title}"
+            else:
+                key = f"one:{path}"
+            if key not in groups:
+                groups[key] = Group(pl_title or None, is_playlist)
+                order.append(key)
+            groups[key].rows.append({
+                "idx": idx if idx is not None else len(groups[key].rows) + 1,
+                "title": "\t".join(t[4:-2]) or path.stem,
+                "artist": t[3] if t[3] != "NA" else "",
+                "duration": duration,
+                "path": path,
+                "tags": {},
+            })
+    return [groups[k] for k in order]
+
+
+def inbox_groups():
+    """Groups for leftover inbox files; order from file-name numbers."""
+    files = find_audio()
+    if not files:
+        return []
+    by_dir = defaultdict(list)
+    for p in files:
+        by_dir[p.parent].append(p)
+    groups = []
+    for folder in sorted(by_dir):
+        name = folder.name if folder != INBOX else None
+        g = Group(name, bool(name) and name != "Singles")
+        for i, p in enumerate(sorted(by_dir[folder], key=track_sort_key)):
+            g.rows.append({"idx": i + 1, "title": p.stem, "artist": "",
+                           "duration": None, "path": p, "tags": {}})
+        groups.append(g)
+    return groups
+
+
+# ---------------------------------------------------------------- mode choice
+
+def decide_mode(group, force):
+    """'album' or 'singles' for this group."""
+    if force == "t":
+        return "singles"
+    if force == "a":
+        return "album"
+    tags = scan_tags(group.files())
+    for r in group.rows:
+        r["tags"] = tags.get(str(r["path"]), {})
+    if not group.is_playlist or len(group.rows) < 2:
+        return "singles"
+    albums = [r["tags"].get("album", "") for r in group.rows]
+    with_album = [a for a in albums if a]
+    if with_album:
+        top, n = Counter(with_album).most_common(1)[0]
+        if n >= 0.8 * len(group.rows):
+            return "album"      # a real release: one album tag everywhere
+        if len(with_album) >= 0.8 * len(group.rows):
+            return "singles"    # every track comes from its own release
+    artists = [r["tags"].get("artist", "") or r["artist"] for r in group.rows]
+    artists = [a for a in artists if a]
+    if artists:
+        top, n = Counter(artists).most_common(1)[0]
+        if n >= 0.8 * len(group.rows):
+            return "album"      # single-artist collection
+    return "singles"
+
+
+# ---------------------------------------------------------------- beets import
+
+def snapshot_library():
+    try:
+        return set(run(["beet", "ls", "-f", "$path"]).stdout.splitlines())
+    except OSError:
+        return set()
+
+
+def beet_import(paths, mode, interactive):
+    """Run beets once. mode: 'album' | 'album_asis' | 'singles' | 'singles_asis'."""
+    paths = [str(p) for p in paths if Path(p).exists()]
+    if not paths:
+        return
+    cmd = ["beet", "import"]
+    if mode.startswith("singles"):
+        cmd.append("-s")
+    if mode.endswith("asis"):
+        cmd.append("-A")
+    if not interactive:
+        cmd.append("-q")
+    cmd += paths
+    run(cmd, capture=False, check=False)
+
+
+def import_group(group, mode, interactive):
+    """Import one group; leftovers get an as-is pass that keeps source tags."""
+    if mode.startswith("album"):
+        targets = sorted({r["path"].parent for r in group.rows})
+    else:
+        targets = group.files()
+    beet_import(targets, mode, interactive)
+    remaining = [r["path"] for r in group.rows if r["path"].exists()]
+    if remaining and not interactive:
+        asis = mode.split("_")[0] + "_asis"
+        info(f"{len(remaining)} file(s) unmatched — importing as-is"
+             " (keeping embedded metadata)")
+        beet_import(remaining if mode.startswith("singles") else targets,
+                    asis, False)
+
+
+def parse_length(s):
+    """beets $length: '234.5' or '3:54' / '1:02:03' → seconds (or None)."""
+    s = (s or "").strip()
+    if not s:
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        pass
+    try:
+        total = 0.0
+        for part in s.split(":"):
+            total = total * 60 + float(part)
+        return total
+    except ValueError:
+        return None
+
+
+def library_items():
+    """All beets items as dicts: length, title, path."""
+    items = []
+    try:
+        out = run(["beet", "ls", "-f", "$length\t$title\t$path"]).stdout
+    except OSError:
+        return items
+    for line in out.splitlines():
+        t = line.split("\t")
+        if len(t) < 3:
+            continue
+        items.append({"length": parse_length(t[0]),
+                      "title": "\t".join(t[1:-1]), "path": t[-1]})
+    return items
+
+
+def match_rows(rows, items, used, require_title=False):
+    """Map rows → library items by duration, tie-broken by title. May give None."""
+    out = []
+    for r in rows:
+        dur = r["duration"] or (r.get("tags") or {}).get("length")
+        best, score, title_score = None, 0.0, 0.0
+        for i, it in enumerate(items):
+            if i in used:
+                continue
+            s, t_score = 0.0, 0.0
+            if dur and it["length"] and abs(dur - it["length"]) <= 2.5:
+                s += 10.0
+            a, b = norm_title(it["title"]), norm_title(r["title"])
+            if a and a == b:
+                s += 6.0
+                t_score = 6.0
+            elif a and b and (a in b or b in a):
+                s += 3.0
+                t_score = 3.0
+            if s > score:
+                best, score, title_score = i, s, t_score
+        matched = best is not None and score >= 10.0
+        if require_title:
+            matched = matched and title_score > 0
+        if matched:
+            used.add(best)
+            out.append(items[best])
+        else:
+            out.append(None)
+    return out
+
+
+def resolve_playlist_tracks(rows, fresh, whole_lib):
+    """Order rows by playlist index and map them onto library items.
+
+    Fresh imports are matched first; songs beets skipped as duplicates
+    resolve to their existing copy in the library.
+    """
+    ordered = sorted(rows, key=lambda r: r["idx"])
+    fresh_used = set()
+    fresh_match = match_rows(ordered, fresh, fresh_used)
+    pairs = []
+    for i, r in enumerate(ordered):
+        item = fresh_match[i] or match_rows([r], whole_lib, set(),
+                                            require_title=True)[0]
+        pairs.append((r, item))
+    return pairs
+
+
+# ---------------------------------------------------------------- m3u playlists
+
+def m3u_path(name):
+    return PLAYLISTS / (sanitize_name(name) + ".m3u")
+
+
+def read_m3u(path):
+    """Existing entries as (extinf-or-None, location), order preserved."""
+    entries = []
+    if not path.exists():
+        return entries
+    pending = None
+    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#EXTM3U"):
+            continue
+        if line.startswith("#"):
+            pending = line
+        else:
+            entries.append((pending, line))
+            pending = None
+    return entries
+
+
+def write_m3u(name, rows, items, replace):
+    """Write/merge the playlist; rows/items are parallel lists (index order)."""
+    path = m3u_path(name)
+    old = read_m3u(path)
+
+    def relative(p):
+        try:
+            return str(Path(p).resolve().relative_to(MUSIC.resolve()))
+        except ValueError:
+            return str(p)
+
+    seen = {relative(loc).lstrip("./") for _, loc in old}
+    entries = list(old)
+    added = 0
+    for r, item in zip(rows, items):
+        if item is None or not Path(item["path"]).exists():
+            continue
+        loc = relative(item["path"])
+        if loc.lstrip("./") in seen:
+            continue
+        seen.add(loc.lstrip("./"))
+        label = (r["artist"] + " - " if r["artist"] else "") + r["title"]
+        length = int((item.get("length") or r["duration"] or 0) + 0.5)
+        entries.append((f"#EXTINF:{length},{label}", loc))
+        added += 1
+    if replace or not old or added:
+        lines = ["#EXTM3U"]
+        for meta, loc in entries:
+            if meta:
+                lines.append(meta)
+            lines.append(loc)
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    verb = "created" if not old else ("replaced" if replace else "updated")
+    info(f"Playlist '{sanitize_name(name)}' {verb}: {path} "
+         f"({len(entries)} tracks, {added} new)")
+    return path
+
+
+def refresh_mpd():
+    try:
+        subprocess.run(["mpc", "update", "--wait"], capture_output=True,
+                       timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+# ---------------------------------------------------------------- commands
+
+def force_mode(parsed):
+    if parsed.album and parsed.singles:
+        sys.exit("Options -a/--album and -t/--singles are mutually exclusive.")
+    if parsed.album:
+        return "a"
+    if parsed.singles:
+        return "t"
+    return None
+
+
+def download_cleanup():
+    for p in INBOX.rglob("*"):
+        if p.is_file() and p.suffix.lower() in IMAGE_EXTS:
+            p.unlink()
+    for d in sorted([d for d in INBOX.rglob("*") if d.is_dir()], reverse=True):
+        try:
+            if not any(d.iterdir()):
+                d.rmdir()
+        except OSError:
+            pass
+
+
+def failed_download_hint():
+    warn("No audio files in the inbox - the download failed (see errors above).")
+    print("   Fixes to try: sudo pacman -Syu       (refresh yt-dlp)")
+    print("                check the yt-dlp config  (JS runtime: --js-runtimes node)")
+
+
+def cmd_download(parsed):
+    init_dirs()
+    INBOX.mkdir(parents=True, exist_ok=True)
+    if not parsed.urls:
+        print(__doc__)
+        sys.exit(1)
+    force = force_mode(parsed)
+    if parsed.no_playlist and parsed.playlist:
+        sys.exit("Options -p NAME and -n contradict each other.")
+
+    info("Downloading...")
+    handle, tsv_name = tempfile.mkstemp(prefix="getmusic-")
+    os.close(handle)
+    cmd = ["yt-dlp", "-x", "--ignore-errors", "--no-update",
+           "--embed-metadata", "--embed-thumbnail", "--yes-playlist", "--newline",
+           "--print-to-file", TSV_TEMPLATE, tsv_name,
+           "-o", str(INBOX) + "/" + OUT_TEMPLATE] + parsed.urls
+    try:
+        run(cmd, capture=False)
+    except KeyboardInterrupt:
+        print()
+    download_cleanup()
+
+    groups = parse_tsv(tsv_name)
+    os.unlink(tsv_name)
+    if not groups:
+        if find_audio():
+            warn("Download produced audio but no metadata — try: getmusic inbox")
+        else:
+            failed_download_hint()
+        sys.exit(1)
+
+    before = snapshot_library()
+    playlists_done = []
+    for g in groups:
+        try:
+            mode = decide_mode(g, force)
+            kind = "an album" if mode == "album" else "singles"
+            if g.is_playlist and len(g.rows) >= 2 and not parsed.no_playlist:
+                label = parsed.playlist or g.name
+                info(f"Importing playlist '{label}' as {kind}...")
+            else:
+                info("Importing single track(s)...")
+            tag_group(g, mode)
+            import_group(g, mode, parsed.interactive)
+            playlists_done.append(g)
+        except Exception as e:
+            warn(f"Import of '{g.name or g.rows[0]['title']}' failed: {e}")
+
+    if parsed.no_playlist:
+        refresh_mpd()
+    else:
+        fresh = [i for i in library_items() if i["path"] not in before]
+        whole = library_items()
+        for g in playlists_done:
+            name = parsed.playlist or g.name
+            eligible = (g.is_playlist or parsed.playlist) and (
+                parsed.playlist or len(g.rows) >= 2)
+            if not name or not eligible:
+                continue
+            pairs = resolve_playlist_tracks(g.rows, fresh, whole)
+            rows = [r for r, _ in pairs]
+            items = [i for _, i in pairs]
+            if not any(items):
+                warn(f"Nothing imported for '{name}' — playlist not written.")
+                continue
+            missing = sum(1 for i in items if i is None)
+            write_m3u(name, rows, items, parsed.replace)
+            if missing:
+                warn(f"{missing} track(s) of '{name}' could not be located"
+                     " — skipped in the playlist (they failed to import).")
+        refresh_mpd()
+
+    left = find_audio()
+    if left:
+        warn(f"{len(left)} file(s) remain in the inbox:")
+        for p in left[:20]:
+            print(f"   {p.relative_to(INBOX)}")
+        print("   Pick releases yourself with: getmusic inbox -i")
+    else:
+        ok("Inbox empty, everything was imported. MPD library updated.")
+    print(f"Playlists: {PLAYLISTS} (rmpc → Playlists tab, or '6')")
+
+
+def cmd_inbox(parsed):
+    init_dirs()
+    groups = inbox_groups()
+    if not groups:
+        ok("Inbox is empty.")
+        return
+    before = snapshot_library()
+    force = force_mode(parsed)
+    for g in groups:
+        mode = decide_mode(g, force)
+        kind = "an album" if mode == "album" else "singles"
+        label = g.name or "loose singles"
+        info(f"Importing inbox group '{label}' as {kind}...")
+        for r in g.rows:  # prefer the real tags over the file name
+            if r["tags"].get("title"):
+                r["title"] = r["tags"]["title"]
+        tag_group(g, mode)
+        import_group(g, mode, parsed.interactive)
+    if not parsed.no_playlist and parsed.playlist:
+        fresh = [i for i in library_items() if i["path"] not in before]
+        rows, items = [], []
+        for g in groups:
+            pairs = resolve_playlist_tracks(g.rows, fresh, library_items())
+            for r, item in pairs:
+                if item is not None:
+                    rows.append(r)
+                    items.append(item)
+        if rows:
+            write_m3u(parsed.playlist, rows, items, parsed.replace)
+        else:
+            warn("Nothing was imported this run — playlist not written.")
+    refresh_mpd()
+    left = find_audio()
+    if left:
+        warn(f"{len(left)} file(s) still in the inbox; try: getmusic inbox -i")
+    else:
+        ok("Inbox empty, everything was imported. MPD library updated.")
+
+
+def cmd_playlist(parsed):
+    init_dirs()
+    rows, items = [], []
+    if parsed.query:
+        out = run(["beet", "ls", "-f", "$length\t$albumartist\t$album\t$track\t$title\t$path"]
+                  + parsed.query)
+        candidates = []
+        for line in out.stdout.splitlines():
+            t = line.split("\t")
+            if len(t) < 6:
+                continue
+            length = parse_length(t[0])
+            title = "\t".join(t[4:-2]) or t[-2]
+            path = t[-1]
+            if not Path(path).exists():
+                continue
+            try:
+                track = int(re.split(r"[/.]", t[3])[0])
+            except (ValueError, IndexError):
+                track = 0
+            candidates.append((t[1].lower(), t[2].lower(), track, title,
+                               length, path, t[1]))
+        candidates.sort(key=lambda r: (r[0], r[1], r[2], r[3].lower()))
+        for _, _, _, title, length, path, albumartist in candidates:
+            rows.append({"idx": len(rows), "title": title,
+                         "artist": albumartist, "duration": length,
+                         "path": Path(path), "tags": {}})
+            items.append({"length": length, "title": title, "path": path})
+    if not parsed.query and m3u_path(parsed.name).exists() and not parsed.replace:
+        warn(f"'{parsed.name}' already exists; pass a beets query to append,"
+             " or --replace to rebuild. Nothing done.")
+        return
+    if not items and parsed.query:
+        warn(f"Query matched no songs — playlist '{parsed.name}' not created.")
+        return
+    write_m3u(parsed.name, rows, items, parsed.replace)
+    refresh_mpd()
+
+
+def cmd_playlists(_parsed):
+    init_dirs()
+    files = sorted(PLAYLISTS.glob("*.m3u"))
+    if not files:
+        print("No stored playlists yet. Playlist downloads create them here,"
+              " or run: getmusic playlist NAME [QUERY...]")
+        return
+    width = max([len(p.stem) for p in files] + [8])
+    print(c(f"{'PLAYLIST'.ljust(width)}  TRACKS", "1;36"))
+    for p in files:
+        n = sum(1 for line in p.read_text(encoding="utf-8", errors="replace").splitlines()
+                if line.strip() and not line.startswith("#"))
+        print(f"{p.stem.ljust(width)}  {n}")
+
+
+def cmd_rmplaylist(parsed):
+    init_dirs()
+    targets = []
+    for name in parsed.names:
+        p = PLAYLISTS / name if name.endswith(".m3u") else m3u_path(name)
+        if not p.exists():
+            warn(f"No such playlist: {name}")
+        else:
+            targets.append(p)
+    if not targets:
+        sys.exit(1)
+    if not parsed.force:
+        for p in targets:
+            print(f"   {p.relative_to(PLAYLISTS)}")
+        ans = input(f"Delete {len(targets)} playlist(s) above? [y/N] ")
+        if not ans.lower().startswith("y"):
+            print("Aborted, nothing deleted.")
+            return
+    for p in targets:
+        p.unlink()
+    ok(f"Removed {len(targets)} playlist(s). The songs themselves are untouched.")
+
+
+def cmd_list(_parsed):
+    list_files()
+
+
+def cmd_clean(_parsed):
+    if not find_audio():
+        print("Inbox is empty.")
+        return
+    ans = input(f"Delete ALL files in {INBOX}? [y/N] ")
+    if ans.lower().startswith("y"):
+        shutil.rmtree(INBOX)
+        print("Inbox emptied.")
+    else:
+        print("Aborted, nothing deleted.")
+
+
+# ---------------------------------------------------------------- argparse
+
+def build_parser():
+    ap = argparse.ArgumentParser(prog="getmusic", add_help=False)
+    sub = ap.add_subparsers(dest="command")
+
+    download = sub.add_parser("download", add_help=False)
+    download.set_defaults(func=cmd_download)
+    download.add_argument("urls", nargs="*")
+    download.add_argument("-t", "--singles", action="store_true",
+                           help="import every track as a single")
+    download.add_argument("-a", "--album", action="store_true",
+                           help="import as one album")
+    download.add_argument("-i", "--interactive", action="store_true",
+                          help="pick releases manually on ambiguous matches")
+    download.add_argument("-p", "--playlist", metavar="NAME",
+                          help="playlist name for the M3U file")
+    download.add_argument("-n", "--no-playlist", action="store_true",
+                          help="don't write an M3U playlist")
+    download.add_argument("--replace", action="store_true",
+                          help="rebuild the playlist instead of merging")
+
+    inbox = sub.add_parser("inbox", add_help=False)
+    inbox.set_defaults(func=cmd_inbox)
+    inbox.add_argument("-t", "--singles", action="store_true",
+                       help="import every track as a single")
+    inbox.add_argument("-a", "--album", action="store_true",
+                       help="import as one album")
+    inbox.add_argument("-i", "--interactive", action="store_true",
+                       help="pick releases manually on ambiguous matches")
+    inbox.add_argument("-p", "--playlist", metavar="NAME",
+                       help="build an M3U playlist from the imports")
+    inbox.add_argument("-n", "--no-playlist", action="store_true",
+                       help="don't write an M3U playlist")
+    inbox.add_argument("--replace", action="store_true",
+                       help="rebuild the playlist instead of merging")
+
+    pl = sub.add_parser("playlist", add_help=False)
+    pl.set_defaults(func=cmd_playlist)
+    pl.add_argument("name", help="playlist name")
+    pl.add_argument("query", nargs="*", help="beets query terms")
+    pl.add_argument("--replace", action="store_true",
+                    help="rebuild instead of merging")
+
+    sub.add_parser("playlists", add_help=False).set_defaults(func=cmd_playlists)
+    sub.add_parser("list", add_help=False).set_defaults(func=cmd_list)
+    sub.add_parser("clean", add_help=False).set_defaults(func=cmd_clean)
+
+    rm = sub.add_parser("rmplaylist", add_help=False)
+    rm.set_defaults(func=cmd_rmplaylist)
+    rm.add_argument("names", nargs="+", help="playlist names")
+    rm.add_argument("-f", "--force", action="store_true",
+                     help="don't ask for confirmation")
+    return ap
+
+
+CHOICES = {"download", "inbox", "playlist", "playlists", "rmplaylist",
+           "list", "clean", "help"}
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if not argv or argv[0] in ("help", "-h", "--help"):
+        print(__doc__)
+        sys.exit(0)
+    if argv[0] not in CHOICES:
+        # `getmusic <url>...` / `getmusic -t <url>` are shorthand for download
+        argv = ["download"] + argv
+    parsed = build_parser().parse_args(argv)
+    try:
+        parsed.func(parsed)
+    except KeyboardInterrupt:
+        print()
+        sys.exit(130)
+
+
+if __name__ == "__main__":
+    main()
