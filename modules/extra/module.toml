@@ -30,4 +30,4 @@ files = [
     { source = "files/yt-dlp", target = ".config/yt-dlp"},
     { source = "files/getmusic", target = ".local/bin", contents = true, permissions = "744"}
 ]
-hooks = ["create_getmusic_folders", "install_yt_dlp"]
+hooks = ["create_getmusic_folders", "install_yt_dlp", "install_mutagen"]

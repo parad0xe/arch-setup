@@ -30,6 +30,10 @@ install_yt_dlp() {
     yay -S --needed --noconfirm --ask 4 yt-dlp-ejs-anyruntime yt-dlp-git --mflags --nocheck
 }
 
+install_mutagen() {
+    pip install mutagen
+}
+
 # Enables MPD as a user service, which starts it with each login, and
 # restarts it so that it applies its deployed config. Never the system unit:
 # it runs as user mpd with /etc/mpd.conf, cannot reach the user's music or
