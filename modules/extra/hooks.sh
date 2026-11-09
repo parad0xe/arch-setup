@@ -48,6 +48,31 @@ start_mpd_user_service() {
         return 0
     fi
     log_info "enabling the mpd user service and restarting it on its config"
+    # Pick up deployed drop-ins (files/systemd-user/mpd.service.d) before
+    # restarting on them.
+    systemctl --user daemon-reload
     systemctl --user enable mpd.service
     systemctl --user restart mpd.service
+}
+
+# zram swap (compressed, half of RAM, capped at 4 GiB) plus the stock RT
+# throttle: with 8 GiB and no swap, a brave or rust-analyzer spike makes the
+# kernel OOM-kill user processes instead of swapping them out (2026-11-09).
+# /etc is outside the files mapping, hence sudo. Idempotent: re-running only
+# re-starts the zram device, a no-op when it is already up, and re-applies
+# sysctls.
+install_zram() {
+    log_info "installing zram swap and the stock RT throttle"
+    if [ ! -f /etc/systemd/zram-generator.conf ]; then
+        sudo tee /etc/systemd/zram-generator.conf >/dev/null <<'EOF_ZRAM'
+[zram0]
+zram-size = min(ram / 2, 4096)
+EOF_ZRAM
+    fi
+    if [ ! -f /etc/sysctl.d/99-rt-throttle.conf ]; then
+        printf 'kernel.sched_rt_runtime_us = 950000\n' | sudo tee /etc/sysctl.d/99-rt-throttle.conf >/dev/null
+    fi
+    sudo sysctl --system >/dev/null
+    sudo systemctl daemon-reload
+    sudo systemctl start systemd-zram-setup@zram0.service
 }
