@@ -24,6 +24,7 @@ return {
 			["<CR>"] = { "fallback" }, -- Enter NEVER confirms, always newline
 			["<C-x>"] = { "select_next", "fallback" }, -- next item
 			["<C-p>"] = { "select_prev", "fallback" }, -- previous item
+            ["<A-c>"] = {"show"},
 		},
 
 		-- ── Appearance ─────────────────────────────────────────
