@@ -15,3 +15,9 @@ replaygain:
 
 fetchart:
   cautious: yes
+
+paths:
+  # One-off tracks (beet import -s, used by getmusic for singles and mixed
+  # playlists) all land flat in one folder instead of spawning a one-song
+  # artist folder at the root of the library.
+  singleton: Singles/$artist - $title

@@ -114,6 +114,9 @@
             "<C-s>s":     Save(kind: Modal(all: false, duplicates_strategy: Ask)),
             "<C-s>a":     Save(kind: Modal(all: true, duplicates_strategy: Ask)),
             "r":          Rate(),
+            // Remove the marked/selected song(s) from a stored playlist
+            // (a picker modal opens; confirmation is asked).
+            "x":          DeleteFromPlaylist(),
         },
         queue: {
             "d":          Delete,
@@ -121,6 +124,9 @@
             "<CR>":       Play,
             "C":          JumpToCurrent,
             "X":          Shuffle,
+            // Add the marked/selected song(s) to a stored playlist —
+            // the picker modal also creates new playlists.
+            "P":          AddToPlaylist,
         },
     ),
     search: (

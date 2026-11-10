@@ -7,7 +7,10 @@ id = "mpd"
 name = "Music server"
 about = "Download and setup a local music server"
 packages = ["mpd", "mpc"]
-files = [{ source = "files/mpd", target = ".config/mpd"}]
+files = [
+    { source = "files/mpd", target = ".config/mpd"},
+    { source = "files/systemd-user/mpd.service.d", target = ".config/systemd/user/mpd.service.d"},
+]
 hooks = ["create_mpd_folders", "expand_mpd_paths", "start_mpd_user_service"]
 
 [[unit]]
@@ -30,4 +33,11 @@ files = [
     { source = "files/yt-dlp", target = ".config/yt-dlp"},
     { source = "files/getmusic", target = ".local/bin", contents = true, permissions = "744"}
 ]
-hooks = ["create_getmusic_folders", "install_yt_dlp"]
+hooks = ["create_getmusic_folders", "install_yt_dlp", "install_mutagen"]
+
+[[unit]]
+id = "memory"
+name = "Memory hardening"
+about = "zram swap so memory spikes stop triggering kernel OOM kills, and the stock RT throttle so a spinning realtime thread cannot starve normal ones. Same on x86 and Apple Silicon."
+packages = ["zram-generator"]
+hooks = ["install_zram"]
