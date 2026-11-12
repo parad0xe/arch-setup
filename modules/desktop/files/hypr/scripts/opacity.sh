@@ -19,4 +19,6 @@ new=$(awk -v c="$cur" -v d="$1" -v s="$step" -v mn="$min" -v mx="$max" 'BEGIN {
 }')
 
 [ "$new" != "$cur" ] || exit 0
-hyprctl eval "hl.dispatch(hl.dsp.window.set_prop({ prop = \"opacity\", value = \"$new\" }))" > /dev/null
+for prop in opacity opacity_fullscreen; do
+    hyprctl eval "hl.dispatch(hl.dsp.window.set_prop({ prop = \"$prop\", value = \"$new\" }))" > /dev/null
+done
