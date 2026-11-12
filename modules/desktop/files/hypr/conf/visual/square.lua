@@ -50,8 +50,8 @@ hl.config({
         shadow = {
             enabled        = true,                          -- new block
             range          = 25,
-            render_power   = 4,
-            color          = "rgba(11111bee)",
+            render_power   = 3,
+            color          = "rgba(11111bff)",
             color_inactive = "rgba(11111b44)",              -- inactive = weaker shadow
         },
     },
