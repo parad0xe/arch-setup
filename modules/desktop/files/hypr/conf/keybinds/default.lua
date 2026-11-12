@@ -104,9 +104,6 @@ hl.bind("SUPER + B", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/bluetooth.sh
 -- Music player
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/music.sh"))
 
--- ==========================================
--- OPACITY OF THE FOCUSED WINDOW
--- ==========================================
-hl.bind(mainMod .. " + <", hl.dsp.exec_cmd("~/.config/hypr/scripts/opacity.sh down"), { repeating = true })
-hl.bind(mainMod .. " + >",  hl.dsp.exec_cmd("~/.config/hypr/scripts/opacity.sh up"),   { repeating = true })
-
+-- --- OPACITY OF THE FOCUSED WINDOW (cmd + < / cmd + >) --- (or match your existing banner style)
+hl.bind(mainMod .. " + SHIFT + comma",   hl.dsp.exec_cmd("~/.config/hypr/scripts/opacity.sh down"), { repeating = true })
+hl.bind(mainMod .. " + SHIFT + period", hl.dsp.exec_cmd("~/.config/hypr/scripts/opacity.sh up"),   { repeating = true })
