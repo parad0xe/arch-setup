@@ -1,0 +1,222 @@
+/* ==========================================
+   WAYBAR — 和風 (Wafū) Dark Purple Theme
+   Black × Purple × Japanese minimal
+   ========================================== */
+
+* {
+    border: none;
+    border-radius: 0;
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 13px;
+    font-weight: 400;
+    min-height: 0;
+}
+
+/* ── Bar ─────────────────────────────────── */
+window#waybar {
+    background-color: transparent;
+}
+
+/* ── Empty window title ──────────────────── */
+#window.empty,
+window#waybar.empty #window {
+    background: transparent;
+    border: none;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+}
+#window.empty label {
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* ── Pill base ───────────────────────────── */
+.modules-left > widget > *,
+.modules-center > widget > *,
+.modules-right > widget > * {
+    background-color: rgba(8, 6, 14, 0.30);
+    color: #c9b8e8;
+    border-radius: 10px;
+    padding: 2px 14px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    margin-right: 6px;
+    border: 1px solid rgba(138, 79, 200, 0.25);
+    box-shadow:
+        0 0 0 0.5px rgba(0,0,0,0.8),
+        inset 0 1px 0 rgba(180, 130, 255, 0.06);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.modules-left > widget > *:hover,
+.modules-center > widget > *:hover,
+.modules-right > widget > *:hover {
+    border-color: rgba(160, 100, 240, 0.55);
+    box-shadow:
+        0 0 8px rgba(130, 60, 220, 0.2),
+        inset 0 1px 0 rgba(180, 130, 255, 0.08);
+}
+
+.modules-right > widget:last-child > * {
+    margin-right: 0;
+}
+
+/* ── Workspaces ──────────────────────────── */
+#workspaces {
+    padding: 2px 6px;
+}
+
+#workspaces button {
+    color: #6b5a80;
+    padding: 0 9px;
+    border-radius: 7px;
+    transition: all 0.2s ease;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+}
+
+#workspaces button:hover {
+    background-color: rgba(138, 79, 200, 0.18);
+    color: #c9b8e8;
+}
+
+#workspaces button.active {
+    background-color: rgba(120, 60, 200, 0.55);
+    color: #ede0ff;
+    box-shadow: 0 0 10px rgba(140, 70, 220, 0.4);
+}
+
+#workspaces button.urgent {
+    background-color: rgba(200, 60, 100, 0.5);
+    color: #ffd0e0;
+}
+
+/* ── Window title ────────────────────────── */
+#window {
+    color: #8a6fb0;
+    font-style: italic;
+    letter-spacing: 0.04em;
+    font-size: 12px;
+}
+
+/* ── Clock ───────────────────────────────── */
+#clock {
+    color: #d4aaff;
+    letter-spacing: 0.06em;
+    font-size: 13px;
+}
+
+/* ── CPU ─────────────────────────────────── */
+#cpu {
+    color: #b07aff;
+}
+
+/* ── Audio ───────────────────────────────── */
+#pulseaudio {
+    color: #9d7acc;
+}
+
+#pulseaudio.muted {
+    color: #4a3a5e;
+}
+
+/* ── Network ─────────────────────────────── */
+#network {
+    color: #a080d0;
+}
+
+#network.disconnected {
+    color: #6b3a5a;
+}
+
+#network.disabled {
+    color: #4a3a5e;
+}
+
+/* ── Bluetooth ───────────────────────────── */
+#bluetooth {
+    color: #8a60c0;
+}
+
+#bluetooth.connected {
+    color: #c0a0ff;
+}
+
+/* ── Battery ─────────────────────────────── */
+#battery {
+    color: #c9b8e8;
+}
+
+#battery.charging,
+#battery.plugged {
+    color: #b090e8;
+}
+
+#battery.warning:not(.charging) {
+    color: #c890a0;
+}
+
+#battery.critical:not(.charging) {
+    color: #c05070;
+    animation-name: blink;
+    animation-duration: 0.8s;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+
+@keyframes blink {
+    from { opacity: 1; }
+    to   { opacity: 0.3; }
+}
+
+/* ── Brightness ──────────────────────────── */
+#custom-brightness {
+    color: #9a80c0;
+}
+
+/* ── Laptop keyboard toggle ──────────────── */
+#custom-laptop-kb.enabled {
+    color: #9d7acc;
+}
+
+#custom-laptop-kb.disabled,
+#custom-laptop-kb.unavailable {
+    color: #4a3a5e;
+}
+
+#custom-laptop-kb.disabled:hover {
+    color: #c890a0;
+}
+
+/* ── Tray ────────────────────────────────── */
+#tray {
+    padding: 0 10px;
+}
+
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+    background-color: rgba(160, 50, 100, 0.4);
+    border-radius: 6px;
+}
+
+/* ── Shutdown ────────────────────────────── */
+#custom-shutdown {
+    color: #7040a0;
+    padding: 2px 14px;
+    font-size: 15px;
+    transition: color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#custom-shutdown:hover {
+    color: #d080ff;
+    border-color: rgba(180, 80, 255, 0.5);
+    box-shadow: 0 0 12px rgba(160, 60, 255, 0.3);
+}
