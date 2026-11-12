@@ -89,6 +89,12 @@ hl.bind(mainMod .. " + ALT + K", hl.dsp.window.move({ x = 0,   y = -30, relative
 hl.bind(mainMod .. " + ALT + L", hl.dsp.window.move({ x = 30,  y = 0,   relative = true }), { repeating = true })
 
 -- ==========================================
+-- OPACITY OF THE FOCUSED WINDOW
+-- ==========================================
+hl.bind(mainMod .. " + minus", hl.dsp.exec_cmd("~/.config/hypr/scripts/opacity.sh down"), { repeating = true })
+hl.bind(mainMod .. " + equal",  hl.dsp.exec_cmd("~/.config/hypr/scripts/opacity.sh up"),   { repeating = true })
+
+-- ==========================================
 -- MOVE WINDOW TO DISPLAY  (skhd: shift+alt - s/g)
 -- ==========================================
 hl.bind("SHIFT + ALT + S", hl.dsp.window.move({ monitor = "-1" }))

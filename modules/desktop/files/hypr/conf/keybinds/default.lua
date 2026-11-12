@@ -103,3 +103,10 @@ hl.bind("SUPER + N", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/wifi.sh"))
 hl.bind("SUPER + B", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/bluetooth.sh"))
 -- Music player
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/music.sh"))
+
+-- ==========================================
+-- OPACITY OF THE FOCUSED WINDOW
+-- ==========================================
+hl.bind(mainMod .. " + <", hl.dsp.exec_cmd("~/.config/hypr/scripts/opacity.sh down"), { repeating = true })
+hl.bind(mainMod .. " + >",  hl.dsp.exec_cmd("~/.config/hypr/scripts/opacity.sh up"),   { repeating = true })
+
