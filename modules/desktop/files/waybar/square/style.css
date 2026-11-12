@@ -7,7 +7,7 @@
     border: none;
     border-radius: 0;
     font-family: "JetBrainsMono Nerd Font", monospace;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 400;
     min-height: 0;
 }
@@ -37,13 +37,13 @@ window#waybar.empty #window {
 .modules-left > widget > *,
 .modules-center > widget > *,
 .modules-right > widget > * {
-    background-color: rgba(8, 6, 14, 0.30);
+    background-color: rgba(8, 6, 14, 0.80);
     color: #c9b8e8;
     border-radius: 10px;
-    padding: 2px 14px;
-    margin-top: 6px;
-    margin-bottom: 6px;
-    margin-right: 6px;
+    padding: 0px 10px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    margin-right: 0px;
     border: 1px solid rgba(138, 79, 200, 0.25);
     box-shadow:
         0 0 0 0.5px rgba(0,0,0,0.8),
@@ -66,7 +66,7 @@ window#waybar.empty #window {
 
 /* ── Workspaces ──────────────────────────── */
 #workspaces {
-    padding: 2px 6px;
+    padding: 0px 6px;
 }
 
 #workspaces button {
