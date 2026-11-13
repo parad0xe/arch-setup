@@ -134,7 +134,9 @@ apply_icon_theme() {
 }
 
 # Restarts the desktop portal so that it picks up the Hyprland and GTK
-# backends just installed; nothing without a user session (a TTY install).
+# backends just installed, and reloads Hyprland so that it picks up the
+# deployed config; nothing without a user session (a TTY install), no
+# reload outside a Hyprland session (SSH, another desktop).
 restart_desktop_portal() {
     if [ -z "${XDG_RUNTIME_DIR-}" ]; then
         log_info "No user session: the portal starts with the next login."
@@ -143,4 +145,11 @@ restart_desktop_portal() {
     log_info "Restarting the desktop portal..."
     systemctl --user restart xdg-desktop-portal \
         || log_warn "The desktop portal could not be restarted now: it starts with the next login."
+    if [ -z "${HYPRLAND_INSTANCE_SIGNATURE-}" ]; then
+        log_info "No Hyprland session: the config loads at the next start."
+        return 0
+    fi
+    log_info "Reloading Hyprland so that it picks up the deployed config..."
+    hyprctl reload \
+        || log_warn "Hyprland could not be reloaded now: the config loads at the next reload."
 }

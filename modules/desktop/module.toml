@@ -21,11 +21,13 @@ files = [
   { source = "files/hypr", target = ".config/hypr", contents = true },
   { source = "files/hypr/conf/keybinds/{keybinds}.lua", target = ".config/hypr/keybinds.lua" },
   { source = "files/hypr/conf/keyboard/{keyboard}.lua", target = ".config/hypr/keyboard.lua" },
+  { source = "files/hypr/conf/visual/{visuals}.lua", target = ".config/hypr/conf/visuals.lua" },
   { source = "files/mako", target = ".config/mako" },
 ]
 variants = [
   { id = "keybinds", name = "Hyprland keybindings", options = ["default", "vim"] },
   { id = "keyboard", name = "Keyboard layout", options = ["default", "vim"] },
+  { id = "visuals", name = "Hyprland window layout", options = ["default", "square"] },
 ]
 hooks = ["restart_desktop_portal"]
 
@@ -39,7 +41,7 @@ picked on its own, so that another bar can take its place.
 """
 packages = ["waybar"]
 files = [{ source = "files/waybar/{theme}", target = ".config/waybar" }]
-variants = [{ id = "theme", name = "Waybar theme", options = ["default", "glass"] }]
+variants = [{ id = "theme", name = "Waybar theme", options = ["default", "glass", "square"] }]
 inputs = [{ id = "start_waybar", prompt = "Start Waybar when it is not running (in a Hyprland session)?", kind = "bool", default = false }]
 hooks = ["reload_waybar"]
 

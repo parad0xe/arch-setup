@@ -33,6 +33,14 @@ hl.bind(mainMod .. " + CTRL + S",  hl.dsp.exec_cmd([[mkdir -p ~/Pictures/screens
 -- ==========================================
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
+hl.bind(mainMod .. " + SHIFT + F", function()
+    local w = hl.get_active_window()
+    if w and w.fullscreen == 1 then
+        hl.dispatch(hl.dsp.window.fullscreen_state({ internal = 0, client = 0 }))
+    else
+        hl.dispatch(hl.dsp.window.fullscreen_state({ internal = 1, client = 0 }))
+    end
+end)
 hl.bind("SHIFT + ALT + M", hl.dsp.window.fullscreen())
 hl.bind("SHIFT + ALT + T", hl.dsp.window.float({ action = "toggle" }))
 hl.bind("SHIFT + ALT + E", hl.dsp.layout("orientationnext"))
@@ -87,6 +95,12 @@ hl.bind(mainMod .. " + ALT + H", hl.dsp.window.move({ x = -30, y = 0,   relative
 hl.bind(mainMod .. " + ALT + J", hl.dsp.window.move({ x = 0,   y = 30,  relative = true }), { repeating = true })
 hl.bind(mainMod .. " + ALT + K", hl.dsp.window.move({ x = 0,   y = -30, relative = true }), { repeating = true })
 hl.bind(mainMod .. " + ALT + L", hl.dsp.window.move({ x = 30,  y = 0,   relative = true }), { repeating = true })
+
+-- ==========================================
+-- OPACITY OF THE FOCUSED WINDOW
+-- ==========================================
+hl.bind(mainMod .. " + minus", hl.dsp.exec_cmd("~/.config/hypr/scripts/opacity.sh down"), { repeating = true })
+hl.bind(mainMod .. " + equal",  hl.dsp.exec_cmd("~/.config/hypr/scripts/opacity.sh up"),   { repeating = true })
 
 -- ==========================================
 -- MOVE WINDOW TO DISPLAY  (skhd: shift+alt - s/g)
