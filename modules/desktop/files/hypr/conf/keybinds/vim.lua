@@ -33,6 +33,14 @@ hl.bind(mainMod .. " + CTRL + S",  hl.dsp.exec_cmd([[mkdir -p ~/Pictures/screens
 -- ==========================================
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
+hl.bind(mainMod .. " + SHIFT + F", function()
+    local w = hl.get_active_window()
+    if w and w.fullscreen == 1 then
+        hl.dispatch(hl.dsp.window.fullscreen_state({ internal = 0, client = 0 }))
+    else
+        hl.dispatch(hl.dsp.window.fullscreen_state({ internal = 1, client = 0 }))
+    end
+end)
 hl.bind("SHIFT + ALT + M", hl.dsp.window.fullscreen())
 hl.bind("SHIFT + ALT + T", hl.dsp.window.float({ action = "toggle" }))
 hl.bind("SHIFT + ALT + E", hl.dsp.layout("orientationnext"))
