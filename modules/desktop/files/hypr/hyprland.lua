@@ -9,6 +9,11 @@ require("conf.visuals")
 require("conf.autostart")
 require("keybinds")
 
+-- ~/.cargo/bin holds the tools built from source by the setup hooks
+-- (eqtui). SDDM does not source the shell rc files, so the Hyprland session
+-- would not have it in PATH; add it for everything Hyprland launches.
+hl.env("PATH", (os.getenv("PATH") or "/usr/local/bin:/usr/bin") .. ":" .. (os.getenv("HOME") or "") .. "/.cargo/bin")
+
 local function in_vm()
     local f = io.open("/proc/cpuinfo", "r")
     if not f then
