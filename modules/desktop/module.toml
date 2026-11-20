@@ -13,7 +13,7 @@ manager of its keybindings, the lock screen, the launcher, the Wi-Fi and
 Bluetooth managers, the screenshots, the wallpaper engines. The bar (Waybar)
 is a part of its own.
 """
-requires = ["hypr-tools", "desktop-tools", "connectivity", "wallpaper-engines",
+requires = ["hypr-tools", "desktop-tools", "connectivity", "sound-manager", "wallpaper-engines",
             "audio", "fonts", "ghostty", "brave", "nautilus"]
 packages = ["hyprland", "mako", "polkit-kde-agent", "qt5-wayland", "qt6-wayland",
             "xdg-desktop-portal-hyprland", "xdg-desktop-portal-gtk"]
@@ -59,14 +59,13 @@ parent = "desktop"
 name = "rofi, wlogout, screenshots, clipboard, media keys, notifications"
 about = """
 rofi (launcher and menus), wlogout (power menu), grim, slurp and satty
-(screenshots), wl-clipboard, playerctl, libnotify, brightnessctl,
-pavucontrol, socat and btop, with the rofi and wlogout configs. On ARM, rofi
-2 is built from the Arch Linux PKGBUILD: the repositories stop at 1.7.5,
-X11 only.
+(screenshots), wl-clipboard, playerctl, libnotify, brightnessctl, socat and
+btop, with the rofi and wlogout configs. On ARM, rofi 2 is built from the
+Arch Linux PKGBUILD: the repositories stop at 1.7.5, X11 only.
 """
 requires = ["fonts"]
 packages = ["wl-clipboard", "grim", "slurp", "satty", "playerctl", "libnotify",
-            "brightnessctl", "pavucontrol", "socat", "btop",
+            "brightnessctl", "socat", "btop",
             { name = "rofi", when = { arch = "x86_64" } }]
 aur = ["wlogout"]
 files = [
@@ -87,6 +86,28 @@ AUR (wlctl-git) with the passphrase hidden while it is typed.
 requires = ["network", "bluetooth"]
 packages = ["speedtest-cli", "bluetui"]
 hooks = ["build_wlctl"]
+
+
+[[unit]]
+id = "sound-manager"
+parent = "desktop"
+name = "Sound manager (wiremix TUI) with equalizer (eqtui TUI)"
+about = """
+wiremix, a TUI sound manager for PipeWire: volumes, per-application streams
+and output/input device routing, with keyboard and mouse, opened by SUPER + V
+and the Waybar sound module in a floating Ghostty window like the Wi-Fi and
+Bluetooth managers (scripts/system/sound.sh, conf/windowrules.lua).
+
+The equalizer is eqtui, a TUI with editable bands and a live response graph,
+opened by SUPER + SHIFT + V (scripts/system/eq.sh) and running as a
+background daemon at login (conf/autostart.lua) so the EQ keeps applying
+after the window is closed. Set the eqtui sink as the default output once
+(in wiremix with d); it sticks, and the physical device is then chosen in
+eqtui's device picker.
+"""
+requires = ["audio"]
+packages = ["wiremix"]
+hooks = ["build_eqtui"]
 
 [[unit]]
 id = "wallpaper-engines"

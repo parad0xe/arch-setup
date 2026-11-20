@@ -1,14 +1,16 @@
 -- ==========================================
 -- WINDOW RULES
 -- ==========================================
--- The Wi-Fi and Bluetooth managers (wlctl, bluetui), opened by the wifi and
--- bluetooth scripts in Ghostty windows of their own class (ghostty
--- --class=ghostty.wlctl, ghostty.bluetui), float in the middle of the screen.
+-- The Wi-Fi, Bluetooth, sound and equalizer managers (wlctl, bluetui,
+-- wiremix, eqtui), opened by the wifi, bluetooth, sound and eq scripts in
+-- Ghostty windows of their own class (ghostty --class=ghostty.wlctl,
+-- ghostty.bluetui, ghostty.wiremix, ghostty.eqtui), float in the middle of
+-- the screen.
 hl.window_rule({
     name   = "connectivity_float",
-    match  = { class = "^ghostty\\.(wlctl|bluetui)$" },
+    match  = { class = "^ghostty\\.(wlctl|bluetui|wiremix|eqtui)$" },
     float  = true,
-    size   = "1100 700",
+    size   = "1200 800",
     center = true,
 })
 

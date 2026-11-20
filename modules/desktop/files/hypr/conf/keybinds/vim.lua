@@ -199,6 +199,8 @@ hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/
 -- ==========================================
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/wifi.sh"))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/bluetooth.sh"))
+hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/sound.sh"))
+hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/eq.sh"))
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("~/.config/hypr/scripts/system/music.sh"))
 
 -- ==========================================

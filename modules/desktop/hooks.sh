@@ -21,6 +21,23 @@ reload_waybar() {
     fi
 }
 
+# Builds eqtui, the TUI equalizer of the sound-manager unit, with cargo: it
+# is on crates.io, not in the repositories or the AUR. libspa-sys needs
+# libclang for bindgen and the PipeWire headers, provided by clang (installed
+# here) and the pipewire package of the audio unit.
+build_eqtui() {
+    if command -v eqtui &> /dev/null; then
+        log_warn "eqtui is already installed."
+        return 0
+    fi
+
+    install_pkg clang pkg-config
+
+    log_info "Building eqtui with cargo, this takes a few minutes..."
+    cargo install eqtui --locked
+    log_success "eqtui $("$HOME/.cargo/bin/eqtui" --version) installed."
+}
+
 # Builds rofi 2 from the Arch Linux PKGBUILD on ARM, where the unit runs
 # this hook: the repositories stop at rofi 1.7.5, which only supports X11
 # (Hyprland shows it through XWayland, which squashes and blurs it on a
